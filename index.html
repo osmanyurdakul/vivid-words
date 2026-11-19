@@ -715,16 +715,25 @@ async function checkMine(key){
     'Sentence: "'+w.mine.replace(/"/g,"'")+'"\n\n'+
     'Check that the word is used correctly and that the sentence sounds natural. Pay special attention to articles, prepositions, word order and word choice.\n'+
     'Reply with JSON only, no other text: {"natural": true or false, "better": "a corrected or more natural version of the sentence, or an empty string if it is already fine", "note": "one short sentence in plain English naming the main fix, or an empty string"}';
+  let raw = "";
   try{
-    const res = await sample(prompt, {modelTier:"quick", maxTokens:400});
-    const j = parseJSON(res.text);
-    const parts = [];
-    parts.push(j.natural ? "Sounds natural." : "Not quite natural yet.");
-    if(j.better && String(j.better).trim() && String(j.better).trim()!==w.mine) parts.push("Try: "+String(j.better).trim());
-    if(j.note && String(j.note).trim()) parts.push(String(j.note).trim());
-    w.mineNote = parts.join(" ").slice(0,600);
+    const res = await sample(prompt, {modelTier:"quick", maxTokens:800});
+    raw = String(res.text||"");
+    let j = null;
+    try{ j = parseJSON(raw); }catch(x){ j = null; }
+    if(j && typeof j==="object"){
+      const parts = [];
+      parts.push(j.natural ? "Sounds natural." : "Not quite natural yet.");
+      if(j.better && String(j.better).trim() && String(j.better).trim()!==w.mine) parts.push("Try: "+String(j.better).trim());
+      if(j.note && String(j.note).trim()) parts.push(String(j.note).trim());
+      w.mineNote = parts.join(" ").slice(0,600);
+    }else if(raw.trim()){
+      w.mineNote = raw.replace(/```[a-z]*/gi,"").trim().slice(0,600);
+    }else{
+      state.mineMsg[key] = "The AI sent an empty answer. Try again.";
+    }
   }catch(e){
-    state.mineMsg[key] = apiErrMsg(e) || "Could not check that sentence. Try again.";
+    state.mineMsg[key] = apiErrMsg(e) || ("Could not check that sentence"+(e && e.message ? ": "+String(e.message).slice(0,160) : "")+". Try again.");
   }
   state.mineBusy[key] = false;
   persist(w); redo();
