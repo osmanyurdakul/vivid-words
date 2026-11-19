@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3f0ff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Vivid Words">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Vivid Words</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* layout: one phone-width column, illustration-first cards, fixed tab bar at the bottom */
+  --bg:#f3f0ff; --surface:#ffffff; --ink:#1c1840; --muted:#625c8c; --line:#ddd7f6;
+  --accent:#ff5a36; --accent-ink:#ffffff; --cobalt:#3a3cff; --sun:#ffd23f; --good:#17855a; --bad:#c92c45;
+  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14112b; --surface:#201c3f; --ink:#f1eeff; --muted:#aaa4d6; --line:#37316c;
+    --accent:#ff7a5c; --accent-ink:#1a1030; --cobalt:#9193ff; --sun:#ffd23f; --good:#4cd6a0; --bad:#ff7d92;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14112b; --surface:#201c3f; --ink:#f1eeff; --muted:#aaa4d6; --line:#37316c;
+  --accent:#ff7a5c; --accent-ink:#1a1030; --cobalt:#9193ff; --sun:#ffd23f; --good:#4cd6a0; --bad:#ff7d92;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--cobalt);outline-offset:2px}
+.wrap{max-width:520px;margin:0 auto;padding:16px 16px 112px}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:4px 0 16px}
+.logo{font-family:var(--display);font-weight:800;font-size:23px;letter-spacing:-.02em;line-height:1}
+.logo span{color:var(--accent)}
+.seg{display:flex;background:var(--surface);border:2px solid var(--ink);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;border-radius:999px;padding:6px 11px;font-weight:600;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+h1{font-family:var(--display);font-weight:800;font-size:34px;letter-spacing:-.03em;line-height:1.05;margin:8px 0 6px;text-wrap:balance}
+.sub{color:var(--muted);margin:0 0 16px}
+form{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+input[type=text],input[type=search]{width:100%;padding:14px 16px;border-radius:14px;border:2px solid var(--ink);background:var(--surface);font-size:18px}
+input.small{font-size:15px;border-width:1.5px;border-color:var(--line)}
+.btn{border:2px solid var(--ink);background:var(--accent);color:var(--accent-ink);border-radius:14px;padding:13px 18px;font-weight:600;font-size:17px;box-shadow:0 4px 0 var(--ink);transition:transform .08s,box-shadow .08s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.btn.alt{background:var(--surface);color:var(--ink)}
+.btn.good{background:var(--good);color:#fff}
+.btn.ghost{box-shadow:none;background:transparent;border-color:var(--line);color:var(--muted);font-size:15px;padding:10px 14px}
+.btn[disabled]{opacity:.6}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+.card{background:var(--surface);border:2px solid var(--ink);border-radius:22px;overflow:hidden;box-shadow:0 6px 0 var(--ink)}
+.art{position:relative;aspect-ratio:4/3;background:var(--sun);overflow:hidden}
+.art svg{display:block;width:100%;height:100%}
+.art .ph{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:96px;color:rgba(28,24,64,.85)}
+.art .ph.loading::after{content:"Drawing a picture…";position:absolute;left:12px;bottom:10px;font-family:var(--body);font-weight:600;font-size:13px;color:rgba(28,24,64,.8)}
+.art .ph.loading{animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.7}}
+@media (prefers-reduced-motion:reduce){.art .ph.loading{animation:none}}
+.art.empty{display:none}
+.art img{display:block;width:100%;height:100%;object-fit:cover}
+.pic{display:flex;flex-wrap:wrap;gap:8px}
+.pic .btn{flex:1 1 auto}
+.body{padding:18px 18px 20px;display:flex;flex-direction:column;gap:12px}
+.meta{display:flex;gap:8px;align-items:center;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.chip{background:var(--bg);border:1.5px solid var(--line);border-radius:999px;padding:2px 10px}
+.word{font-family:var(--display);font-weight:800;font-size:44px;line-height:1;letter-spacing:-.03em;margin:0;overflow-wrap:anywhere}
+.word.long{font-size:26px;line-height:1.2;letter-spacing:-.01em}
+.front .word.long{font-size:30px}
+.word .de{color:var(--cobalt);font-size:.55em;font-weight:600;margin-right:4px}
+.ipa{color:var(--muted);margin:0;font-size:15px}
+.gloss{display:inline-block;align-self:flex-start;background:var(--sun);color:#1c1840;border-radius:10px;padding:4px 12px;font-weight:600}
+.meaning{margin:0;font-size:18px}
+.forms{margin:0;color:var(--muted);font-size:15px}
+.label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:4px 0 -4px}
+.ex{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.ex li{border-left:4px solid var(--accent);padding-left:12px}
+.ex .t{font-weight:500}
+.ex .en{color:var(--muted);font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.tip{background:var(--bg);border-radius:14px;padding:12px 14px;font-size:15px}
+.note{font-size:14px;color:var(--muted)}
+.actions{display:flex;gap:10px;margin-top:4px}
+.actions .btn{flex:1}
+.msg{padding:14px 16px;border-radius:14px;border:2px solid var(--ink);background:var(--surface)}
+.msg.err{border-color:var(--bad);color:var(--bad)}
+.skel{height:280px;border-radius:22px;border:2px dashed var(--line);display:grid;place-items:center;color:var(--muted)}
+.list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.item{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:var(--surface);border:2px solid var(--ink);border-radius:16px;padding:8px;box-shadow:0 3px 0 var(--ink)}
+.thumb{width:72px;height:54px;border-radius:10px;overflow:hidden;flex:none;position:relative;background:var(--sun)}
+.thumb svg{display:block;width:100%;height:100%}
+.thumb .ph{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:28px;color:rgba(28,24,64,.85)}
+.item .w{font-family:var(--display);font-weight:800;font-size:20px;line-height:1.1}
+.item .g{color:var(--muted);font-size:14px}
+.item .due{margin-left:auto;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;border:1.5px solid var(--line);color:var(--muted);white-space:nowrap}
+.item .due.now{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.empty{text-align:center;color:var(--muted);padding:32px 8px}
+.progress{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin:0 0 16px}
+.progress i{display:block;height:100%;background:var(--accent)}
+.front{padding:36px 18px;text-align:center}
+.front .word{font-size:54px}
+.front p{color:var(--muted)}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:2px solid var(--ink);padding:8px 12px calc(8px + env(safe-area-inset-bottom))}
+nav .in{max-width:520px;margin:0 auto;display:flex;gap:8px}
+.tab{flex:1;border:0;background:transparent;border-radius:12px;padding:10px 4px;font-weight:600;font-size:15px;color:var(--muted);position:relative}
+.tab[aria-current="page"]{background:var(--ink);color:var(--bg)}
+.tab .n{position:absolute;top:2px;right:10px;background:var(--accent);color:var(--accent-ink);border-radius:99px;font-size:11px;padding:0 6px;line-height:18px}
+.back{border:0;background:transparent;color:var(--muted);font-weight:600;padding:4px 0 12px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.qcard{background:var(--surface);border:2px solid var(--ink);border-radius:22px;padding:20px 18px;box-shadow:0 6px 0 var(--ink)}
+.qtext{font-family:var(--display);font-weight:800;font-size:24px;line-height:1.2;letter-spacing:-.02em;margin-bottom:16px}
+.qword{color:var(--cobalt)}
+.cloze{font-family:var(--body);font-weight:500;font-size:18px;margin-top:10px;letter-spacing:0;border-left:4px solid var(--accent);padding-left:12px}
+.cloze .en{color:var(--muted);font-size:14px;margin-top:4px}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{text-align:left;padding:13px 16px;border-radius:14px;border:2px solid var(--line);background:var(--bg);font-weight:600;font-size:17px}
+.opt:not([disabled]):active{border-color:var(--ink)}
+.opt.ok{border-color:var(--good);background:var(--good);color:#fff}
+.opt.no{border-color:var(--bad);background:var(--bad);color:#fff}
+.opt[disabled]{cursor:default}
+.missed{list-style:none;padding:0;margin:0 0 20px;display:flex;flex-direction:column;gap:8px}
+.missed li{background:var(--surface);border:2px solid var(--line);border-radius:12px;padding:10px 14px;font-weight:600}
+.missed .g{color:var(--muted);font-weight:400;margin-left:6px}
+.backup{margin-top:36px;border-top:2px dashed var(--line);padding-top:22px}
+.h2{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.02em;margin:0 0 6px}
+textarea{width:100%;margin-top:10px;padding:12px 14px;border-radius:14px;border:2px solid var(--line);background:var(--surface);font-size:15px;resize:vertical}
+summary{cursor:pointer;font-weight:600;color:var(--muted)}
+.hright{display:flex;align-items:center;gap:8px}
+.gear{width:40px;height:40px;border-radius:50%;border:2px solid var(--ink);background:var(--surface);display:grid;place-items:center;padding:0}
+.wordrow{display:flex;align-items:center;gap:10px}
+.front .wordrow{justify-content:center}
+.spk{flex:none;width:42px;height:42px;border-radius:50%;border:2px solid var(--ink);background:var(--surface);color:var(--ink);display:grid;place-items:center;padding:0}
+.spk:active{background:var(--sun)}
+.exrow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+.exrow .spk{width:34px;height:34px;border-width:1.5px}
+#toast{position:fixed;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));max-width:488px;margin:0 auto;background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 16px;font-size:15px;z-index:5;display:none}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
+.field label{font-weight:600}
+.field select{padding:12px 14px;border-radius:14px;border:2px solid var(--ink);background:var(--surface);font-size:16px}
+.hint{margin:0;color:var(--muted);font-size:14px}
+.bulk{margin:0 0 20px;border:2px dashed var(--line);border-radius:16px;padding:12px 14px}
+.bulk textarea{margin-bottom:10px}
+.bulkstat{margin-top:12px;font-size:15px}
+.failed{margin:8px 0 0;padding-left:18px;color:var(--bad);font-size:14px}
+.mine{margin-top:18px}
+.mine textarea{width:100%;margin:8px 0 10px;border:2px solid var(--line);border-radius:14px;padding:12px 14px;font:inherit;font-size:16px;background:var(--bg);color:var(--ink);resize:vertical}
+.modes{display:flex;gap:8px;margin:14px 0 18px}
+.modes button{flex:1;border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px 6px;font-weight:600;font-size:15px;color:var(--ink)}
+.modes button[aria-pressed="true"]{border-color:var(--ink);background:var(--sun)}
+.front .label{margin-bottom:12px}
+.recbar{display:flex;gap:10px;margin-top:16px;justify-content:center}
+.recbar .btn{flex:1}
+.btn.recording{background:var(--bad);color:#fff;border-color:var(--ink)}
+.qclue{color:var(--muted);font-size:15px;margin:10px 0 0}
+#tf{display:flex;flex-direction:column;gap:12px;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">Vivid<span>.</span>Words</div>
+    <div class="hright">
+      <div class="seg" id="langs" role="group" aria-label="Language"></div>
+      <button class="gear" data-act="settings" aria-label="Settings"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+    </div>
+  </header>
+  <main id="view"></main>
+</div>
+<input type="file" id="photo" accept="image/*" hidden>
+<input type="file" id="importfile" accept=".json,application/json,text/plain" hidden>
+<div id="toast" role="status"></div>
+<nav><div class="in" id="tabs">
+  <button class="tab" data-act="tab" data-tab="add">Add</button>
+  <button class="tab" data-act="tab" data-tab="words">Words</button>
+  <button class="tab" data-act="tab" data-tab="cards">Cards<span class="n" id="due-n" hidden></span></button>
+  <button class="tab" data-act="tab" data-tab="quiz">Quiz</button>
+</div></nav>
+
+<script>
+const LANGS = {nl:{name:"Dutch", label:"Dutch"}, en:{name:"English", label:"English"}};
+const INTERVALS = [0,1,3,7,16,35];
+const DAY = 864e5;
+
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+const state = {
+  lang: lsGet("vw-lang")==="en" ? "en" : "nl",
+  tab: "add", words: {}, current: null, busy: false, error: "",
+  q: "", note: "", search: "", openKey: null,  more: {}, picErr: {}, photoKey: "", study: null, quiz: null, backupMsg: "", paste: "", cache: {}, storageWarn: false, bulk: null, bulkText: "", bulkOpen: false, settingsMsg: "", mineMsg: {}, mineBusy: {}, speakMode: lsGet("vw-speak")==="1", rec: null, hint: false, quizMode: (["choice","type","mixed"].indexOf(lsGet("vw-qmode"))>=0 ? lsGet("vw-qmode") : "mixed"), quizMsg: ""
+};
+
+/* ---------- settings and storage (this device only) ---------- */
+const DEFAULTS = {key:"", lookupModel:"claude-haiku-5-5", drawModel:"claude-sonnet-5-5", rate:0.9};
+let settings = Object.assign({}, DEFAULTS);
+function loadSettings(){
+  try{ const o = JSON.parse(lsGet("vw-settings")||"{}"); if(o && typeof o==="object") settings = Object.assign({}, DEFAULTS, o); }catch(e){}
+}
+function saveSettings(){ lsSet("vw-settings", JSON.stringify(settings)); }
+function loadCache(){
+  try{ const o = JSON.parse(lsGet("vw-cache")||"{}"); if(o && typeof o==="object") state.cache = o; }catch(e){}
+}
+function putCache(typedKey, w){
+  try{
+    const c = Object.assign({}, w); delete c.svg; delete c.photo; delete c.drawing;
+    const t = Date.now();
+    state.cache[typedKey] = {t, w:c};
+    if(w.key!==typedKey) state.cache[w.key] = {t, w:c};
+    const ks = Object.keys(state.cache);
+    if(ks.length>300) ks.sort((a,b)=>state.cache[a].t-state.cache[b].t).slice(0,ks.length-300).forEach(k=>{ delete state.cache[k]; });
+    lsSet("vw-cache", JSON.stringify(state.cache));
+  }catch(e){}
+}
+const IDB = {
+  db: null,
+  open(){
+    return new Promise((res,rej)=>{
+      if(!window.indexedDB) return rej(new Error("no indexedDB"));
+      const r = indexedDB.open("vivid-words", 1);
+      r.onupgradeneeded = ()=>{ r.result.createObjectStore("words", {keyPath:"key"}); };
+      r.onsuccess = ()=>{ IDB.db = r.result; res(); };
+      r.onerror = ()=>rej(r.error);
+      r.onblocked = ()=>rej(new Error("blocked"));
+    });
+  },
+  all(){
+    return new Promise((res,rej)=>{
+      const q = IDB.db.transaction("words").objectStore("words").getAll();
+      q.onsuccess = ()=>res(q.result||[]);
+      q.onerror = ()=>rej(q.error);
+    });
+  },
+  tx(fn){
+    if(!IDB.db){ state.storageWarn = true; return; }
+    try{
+      const t = IDB.db.transaction("words","readwrite");
+      fn(t.objectStore("words"));
+      t.onerror = t.onabort = ()=>{ state.storageWarn = true; render(); };
+    }catch(e){ state.storageWarn = true; }
+  }
+};
+function persist(w){
+  w.updated = Date.now();
+  state.words[w.key] = w;
+  const c = Object.assign({}, w); delete c.drawing;
+  IDB.tx(st=>st.put(c));
+}
+function remove(key){
+  delete state.words[key];
+  IDB.tx(st=>st.delete(key));
+}
+async function initStore(){
+  loadSettings(); loadCache();
+  try{
+    await IDB.open();
+    const all = await IDB.all();
+    all.forEach(w=>{ if(w && w.key) state.words[w.key] = w; });
+  }catch(e){ state.storageWarn = true; }
+  render();
+}
+
+/* ---------- helpers ---------- */
+function slug(w){ return w.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,"-").replace(/^-|-$/g,"") || "word"; }
+function hash(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))|0; } return Math.abs(h); }
+const PH_COLORS = ["#ffd23f","#7fe0c3","#ff9b85","#a9b0ff","#ffb3e1","#9bd8ff"];
+function phColor(key){ return PH_COLORS[hash(key)%PH_COLORS.length]; }
+function parseJSON(raw){
+  const a = raw.indexOf("{"), b = raw.lastIndexOf("}");
+  if(a<0||b<a) throw new Error("No JSON");
+  return JSON.parse(raw.slice(a,b+1));
+}
+function cleanSvg(s, key){
+  const m = String(s||"").match(/<svg[\s\S]*<\/svg>/i);
+  if(!m || m[0].length>40000) return "";
+  const doc = new DOMParser().parseFromString(m[0],"image/svg+xml");
+  const svg = doc.documentElement;
+  if(!svg || svg.nodeName.toLowerCase()!=="svg" || doc.querySelector("parsererror")) return "";
+  svg.querySelectorAll("script,foreignObject,iframe,image,use,a,style,text,animate,animateTransform,set").forEach(n=>n.remove());
+  [svg,...svg.querySelectorAll("*")].forEach(n=>{
+    [...n.attributes].forEach(a=>{
+      const nm = a.name.toLowerCase(), v = a.value;
+      if(nm.startsWith("on") || nm==="href" || nm==="xlink:href" || /javascript:|data:|https?:/i.test(v) || /url\(\s*["']?(?!#)/i.test(v)) n.removeAttribute(a.name);
+    });
+  });
+  svg.removeAttribute("width"); svg.removeAttribute("height");
+  svg.setAttribute("viewBox","0 0 400 300");
+  svg.setAttribute("preserveAspectRatio","xMidYMid slice");
+  const p = "k"+hash(key)+"-";
+  return new XMLSerializer().serializeToString(svg)
+    .replace(/\bid="([^"]+)"/g,'id="'+p+'$1"')
+    .replace(/url\(#([^)]+)\)/g,'url(#'+p+'$1)');
+}
+function artHtml(w, loading){
+  if(w.photo) return '<img src="'+w.photo+'" alt="">';
+  if(w.svg) return w.svg;
+  if(loading) return '<div class="ph loading" style="background:'+phColor(w.key)+'">'+esc((w.word||"?").charAt(0).toUpperCase())+'</div>';
+  return "";
+}
+function dueLabel(w){
+  const d = (w.due||0) - Date.now();
+  if(d<=0) return {t:"Due", now:true};
+  const days = Math.ceil(d/DAY);
+  return {t:"in "+days+"d", now:false};
+}
+function dueKeys(){
+  return Object.keys(state.words).filter(k=>state.words[k].lang===state.lang && (state.words[k].due||0)<=Date.now())
+    .sort((a,b)=>(state.words[a].due||0)-(state.words[b].due||0));
+}
+
+/* ---------- Claude calls ---------- */
+async function getSample(){ return settings.key ? callApi : null; }
+async function callApi(prompt, o){
+  o = o || {};
+  const quick = o.modelTier==="quick";
+  const stream = !!o.onText;
+  let res;
+  try{
+    res = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{
+        "x-api-key": settings.key,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: quick ? settings.lookupModel : settings.drawModel,
+        max_tokens: o.maxTokens || (quick ? 1200 : 6000),
+        stream: stream,
+        messages: [{role:"user", content:prompt}]
+      }),
+      signal: o.signal
+    });
+  }catch(e){ const err = new Error("network"); err.code = "network"; throw err; }
+  if(!res.ok){
+    let msg = "";
+    try{ const j = await res.json(); msg = (j.error && j.error.message) || ""; }catch(e){}
+    const err = new Error(msg || ("HTTP "+res.status));
+    err.code = res.status===401||res.status===403 ? "bad_key" : res.status===429 ? "rate_limited" : (res.status===529||res.status===503) ? "busy" : /credit|balance|billing/i.test(msg) ? "no_credit" : "api_error";
+    throw err;
+  }
+  if(!stream){
+    const j = await res.json();
+    return {text:(j.content||[]).map(b=>b.text||"").join("")};
+  }
+  const reader = res.body.getReader(), dec = new TextDecoder();
+  let buf = "", text = "";
+  for(;;){
+    const r = await reader.read();
+    if(r.done) break;
+    buf += dec.decode(r.value, {stream:true}).replace(/\r\n/g,"\n");
+    let i;
+    while((i = buf.indexOf("\n\n")) >= 0){
+      const block = buf.slice(0,i); buf = buf.slice(i+2);
+      const line = block.split("\n").find(l=>l.startsWith("data:"));
+      if(!line) continue;
+      let ev; try{ ev = JSON.parse(line.slice(5).trim()); }catch(e){ continue; }
+      if(ev.type==="content_block_delta" && ev.delta && ev.delta.type==="text_delta"){
+        text += ev.delta.text; o.onText({text, delta:ev.delta.text});
+      }else if(ev.type==="error"){
+        const err = new Error((ev.error && ev.error.message) || "stream error");
+        err.code = ev.error && ev.error.type==="overloaded_error" ? "busy" : "api_error"; throw err;
+      }
+    }
+  }
+  return {text};
+}
+function apiErrMsg(e){
+  const c = e && e.code;
+  if(c==="bad_key") return "Your API key was rejected. Check it in Settings.";
+  if(c==="no_credit") return "The API says your credit is used up. Add credit in the Anthropic Console, then try again.";
+  if(c==="rate_limited") return "Too many requests in a row. Wait a moment and try again.";
+  if(c==="busy") return "The API is busy right now. Try again in a moment.";
+  if(c==="network") return "Could not reach the API. Check your connection.";
+  return "";
+}
+const NEEDS_KEY = "Add your Anthropic API key in Settings (the sliders icon) first.";
+function partialField(text, key){
+  const m = new RegExp('"'+key+'"\\s*:\\s*"').exec(text);
+  if(!m) return "";
+  let out = "";
+  for(let i=m.index+m[0].length; i<text.length; i++){
+    const c = text[i];
+    if(c==='"') break;
+    if(c==="\\"){
+      const n = text[i+1];
+      if(n===undefined) break;
+      if(n==="u"){ const h = text.slice(i+2,i+6); if(h.length<4) break; out += String.fromCharCode(parseInt(h,16)); i += 5; continue; }
+      out += n==="n" ? " " : n; i++; continue;
+    }
+    out += c;
+  }
+  return out;
+}
+function isPhrase(t){ return /\S+\s+\S+/.test(t.trim()); }
+function corePrompt(text, lang){
+  const L = LANGS[lang].name;
+  if(isPhrase(text)) return 'A learner met this '+L+' sentence or phrase in a book: "'+text+'". Explain it in plain English at about B1 level. Reply with ONLY one JSON object, no markdown, using these keys: '+
+    '"word": the text as given with obvious typos fixed; "pos": "phrase", "sentence" or "idiom"; "translation": a natural English rendering; '+
+    '"meaning": one or two plain English sentences on what it means and when it is used (for an idiom give the literal meaning and the real meaning). '+
+    'If the text is not valid '+L+', return {"error":"short reason"}.';
+  return 'A learner met the '+L+' word "'+text+'" in a book. Explain it in plain English at about B1 level. Reply with ONLY one JSON object, no markdown, using these keys: '+
+    '"word": the dictionary headword (Dutch nouns without the article, verbs in the infinitive); "pos": noun, verb, adjective, adverb or similar; '+
+    '"article": "de" or "het" for Dutch nouns, otherwise an empty string; "translation": 1 to 3 plain English words; '+
+    '"meaning": one or two plain English sentences, with a note on register if it is formal, literary or informal, and a mention if the input was an inflected form; '+
+    '"example": '+(lang==="nl"?'{"t": a natural Dutch sentence, "en": its English translation}':'{"t": a natural English sentence}')+'. '+
+    'If it is not a real '+L+' word, return {"error":"short reason"}.';
+}
+function detailsPrompt(w){
+  const L = LANGS[w.lang].name, nl = w.lang==="nl";
+  const ex = nl ? '{"t": a natural Dutch sentence, "en": its English translation}' : '{"t": a natural English sentence}';
+  if(w.kind==="phrase") return 'A learner is studying this '+L+' phrase: "'+w.word+'" ('+w.translation+'). Reply with ONLY one JSON object, no markdown, using these keys: '+
+    '"breakdown": up to 5 objects {"part": a word or chunk from the phrase, "note": a short plain English note on its meaning or grammar}; '+
+    '"examples": 2 objects '+ex+' that use the same structure; "synonyms": up to 2 other ways to say it in '+L+'; "tip": one short memory hook.';
+  return 'A learner is studying the '+L+' word "'+w.word+'" ('+w.translation+', '+w.pos+'). Reply with ONLY one JSON object, no markdown, using these keys: '+
+    '"ipa": '+(nl?'pronunciation in IPA for standard Netherlands Dutch':'pronunciation in IPA for General American English, not British')+'; "forms": '+(nl?'plural and diminutive for nouns, infinitive, simple past and past participle for verbs, comparative for adjectives':'irregular inflections only')+', or an empty string; '+
+    '"examples": 2 more objects '+ex+', different from "'+((w.examples&&w.examples[0])?w.examples[0].t:"")+'"; '+
+    '"synonyms": up to 3 '+L+' words; "tip": one short memory hook such as a similar English word or the parts of the word.';
+}
+function svgPrompt(w){
+  const ex = (w.examples&&w.examples[0]) ? ' Example: '+w.examples[0].t : '';
+  return 'Illustrate the meaning of "'+w.word+'" ('+w.translation+'). Meaning: '+w.meaning+ex+' '+
+  'Choose one concrete scene that shows the meaning at a glance to someone who does not know the word: a main subject doing something, with 2 or 3 clear supporting objects. For an abstract word, use a typical everyday situation or a simple visual metaphor. '+
+  'Goal: someone who sees only this picture should be able to guess the meaning. '+
+  'Output ONLY one <svg> element with viewBox="0 0 400 300". '+
+  'Composition: the main subject large and centred, filling about half the frame, and a simple full-bleed background with a ground or horizon line, sky or wall. '+
+  'Style: modern flat vector illustration with layered shapes, soft shading using linearGradient, small highlights, and a consistent palette of 5 to 7 colours. '+
+  'Use recognisable silhouettes: people with round heads, bodies and limbs; animals and objects with their defining features. '+
+  'Use at most 60 shapes. No text or letters, no scripts, no external references.';
+}
+function refreshCard(w){
+  if(state.tab==="cards"){ render(); return; }
+  const box = $("#cardbox");
+  if(box && box.dataset.key===w.key) box.innerHTML = card(w, {readonly: state.tab==="words"});
+}
+async function lookup(){
+  const word = state.q.trim();
+  if(!word || state.busy) return;
+  const lang = state.lang;
+  const typedKey = (lang+"_"+slug(word)).slice(0,90);
+  let hit = state.words[typedKey];
+  if(!hit && state.cache[typedKey]){
+    const c = state.cache[typedKey].w;
+    hit = state.words[c.key] || Object.assign({}, c, {svg:"", photo:"", examples:(c.examples||[]).slice(), note:state.note.trim()||c.note||""});
+  }
+  if(hit){ state.error = ""; state.current = hit; render(); return; }
+  const sample = await getSample();
+  if(!sample){ state.error = NEEDS_KEY; render(); return; }
+  state.busy = true; state.error = ""; state.current = null; render();
+  let draft = null;
+  const onText = ({text}) => {
+    try{
+      const hw = partialField(text, "word");
+      if(!hw) return;
+      if(!draft) draft = {key:"__draft", lang, kind:isPhrase(word)?"phrase":"word", word:"", pos:"", article:"", ipa:"", translation:"", meaning:"", forms:"", examples:[], breakdown:[], synonyms:[], tip:"", note:""};
+      draft.word = hw; draft.pos = partialField(text,"pos"); draft.article = partialField(text,"article");
+      draft.translation = partialField(text,"translation"); draft.meaning = partialField(text,"meaning");
+      const exi = text.indexOf('"example"');
+      if(exi>=0){ const sub = text.slice(exi), et = partialField(sub,"t"); draft.examples = et ? [{t:et, en:partialField(sub,"en")}] : []; }
+      if(state.current!==draft){ state.current = draft; render(); } else refreshCard(draft);
+    }catch(e){}
+  };
+  try{
+    const res = await sample(corePrompt(word, lang), {modelTier:"quick", onText});
+    const d = parseJSON(res.text);
+    if(d.error) throw new Error(d.error);
+    const key = (lang+"_"+slug(d.word||word)).slice(0,90);
+    if(state.words[key]){ state.current = state.words[key]; state.busy = false; render(); return; }
+    const w = {
+      key, lang, word:String(d.word||word), kind:isPhrase(word)?"phrase":"word", pos:d.pos||"", article:d.article||"", ipa:"",
+      translation:d.translation||"", meaning:d.meaning||"", forms:"",
+      examples:(d.example&&d.example.t)?[d.example]:[], breakdown:[], synonyms:[], tip:"",
+      note:state.note.trim(), svg:"", photo:"", box:0, due:Date.now(), added:Date.now()
+    };
+    state.current = w; state.busy = false; state.more[key] = true; render();
+    loadDetails(w, sample, typedKey);
+  }catch(e){
+    state.busy = false;
+    if(state.current && state.current.key==="__draft") state.current = null;
+    state.error = apiErrMsg(e) ||
+      "Could not look that up"+(e&&e.message&&e.message!=="No JSON"?": "+e.message:"")+". Check the spelling and try again.";
+    render();
+  }
+}
+async function loadDetails(w, sample, typedKey){
+  try{
+    const res = await sample(detailsPrompt(w), {modelTier:"quick"});
+    const d = parseJSON(res.text);
+    if(d.ipa) w.ipa = String(d.ipa);
+    if(d.forms) w.forms = String(d.forms);
+    if(Array.isArray(d.breakdown)) w.breakdown = d.breakdown.slice(0,5);
+    if(Array.isArray(d.examples)) w.examples = (w.examples||[]).concat(d.examples).slice(0,3);
+    if(Array.isArray(d.synonyms)) w.synonyms = d.synonyms.slice(0,3);
+    if(d.tip) w.tip = String(d.tip);
+  }catch(e){}
+  delete state.more[w.key];
+  putCache(typedKey||w.key, w);
+  if(state.words[w.key]) persist(w);
+  refreshCard(w);
+}
+async function drawArt(w){
+  delete state.picErr[w.key];
+  const sample = await getSample();
+  if(!sample){ state.picErr[w.key] = NEEDS_KEY; refreshCard(w); return; }
+  w.drawing = true; refreshCard(w);
+  try{
+    const res = await sample(svgPrompt(w), {modelTier:"complex"});
+    const svg = cleanSvg(res.text, w.key);
+    if(svg){ w.svg = svg; w.photo = ""; if(state.words[w.key]) persist(w); }
+    else state.picErr[w.key] = "Could not draw this one. Try again.";
+  }catch(e){ state.picErr[w.key] = apiErrMsg(e) || "Could not draw this one. Try again."; }
+  w.drawing = false; refreshCard(w);
+}
+function shrinkPhoto(file){
+  return new Promise((res,rej)=>{
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = ()=>{
+      const s = Math.min(1, 640/Math.max(img.width,img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width*s); c.height = Math.round(img.height*s);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL("image/jpeg",0.72));
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); rej(new Error("bad image")); };
+    img.src = url;
+  });
+}
+
+/* ---------- views ---------- */
+function card(w, opts){
+  opts = opts || {};
+  const saved = !!state.words[w.key];
+  const ex = (w.examples||[]).map((e,i)=>'<li><div class="exrow"><div class="t">'+esc(e.t)+'</div>'+spkBtn(w.key,i)+'</div>'+(e.en?'<div class="en">'+esc(e.en)+'</div>':'')+'</li>').join("");
+  const bd = (w.breakdown||[]).map(b=>'<li><div class="t">'+esc(b.part)+'</div><div class="en">'+esc(b.note)+'</div></li>').join("");
+  const syn = (w.synonyms||[]).map(s=>'<span class="chip">'+esc(s)+'</span>').join("");
+  const tail = opts.readonly ? "" : '<div class="actions">'+(saved?'<button class="btn alt" disabled>Saved</button>':'<button class="btn" data-act="save">Save word</button>')+'</div>';
+  return '<article class="card"><div class="body">'+
+      '<div class="meta">'+(w.pos?'<span>'+esc(w.pos)+'</span>':'')+'<span class="chip">'+(w.lang==="nl"?"Dutch":"English")+'</span></div>'+
+      '<div class="wordrow"><h2 class="word'+(w.kind==="phrase"?' long':'')+'">'+(w.article?'<span class="de">'+esc(w.article)+'</span>':'')+esc(w.word)+'</h2>'+spkBtn(w.key)+'</div>'+
+      (w.ipa?'<p class="ipa">/'+esc(String(w.ipa).replace(/^\/|\/$/g,""))+'/</p>':'')+
+      (w.translation?'<span class="gloss">'+esc(w.translation)+'</span>':'')+
+      '<p class="meaning">'+esc(w.meaning)+'</p>'+
+      (w.forms?'<p class="forms">'+esc(w.forms)+'</p>':'')+
+      (bd?'<div class="label">Piece by piece</div><ul class="ex">'+bd+'</ul>':'')+
+      (ex?'<div class="label">In a sentence</div><ul class="ex">'+ex+'</ul>':'')+
+      (syn?'<div class="label">Similar words</div><div class="chips">'+syn+'</div>':'')+
+      (w.tip?'<div class="tip"><b>Memory hook.</b> '+esc(w.tip)+'</div>':'')+
+      (state.more[w.key]?'<div class="note">Adding pronunciation and more examples…</div>':'')+
+      (w.note?'<div class="note">Seen in: '+esc(w.note)+'</div>':'')+
+      (saved?mineBox(w):'')+
+      tail+
+    '</div></article>';
+}
+function wordLabel(w){ return (w.article?w.article+" ":"")+w.word; }
+function langKeys(){ return Object.keys(state.words).filter(k=>state.words[k].lang===state.lang); }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+
+function addView(){
+  let out = '<h1>Catch a word or phrase</h1><p class="sub">Type a '+LANGS[state.lang].name+' word, or a whole sentence you do not understand. Save it and it joins your flashcards.</p>'+
+    '<form id="f"><input type="text" id="w" placeholder="'+(state.lang==="nl"?"e.g. gezellig, or a sentence":"e.g. ephemeral, or a sentence")+'" autocomplete="off" autocapitalize="off" spellcheck="false" value="'+esc(state.q)+'" aria-label="Word">'+
+    '<input type="text" class="small" id="note" placeholder="Where did you see it? (book, page, optional)" autocomplete="off" value="'+esc(state.note)+'" aria-label="Where you saw it">'+
+    '<button class="btn" type="submit"'+(state.busy?' disabled':'')+'>'+(state.busy?"Looking it up…":"Look up")+'</button></form>';
+  if(state.error) out += '<div class="msg err" role="alert">'+esc(state.error)+'</div>';
+  if(state.busy && !state.current) out += '<div class="skel">Finding the meaning…</div>';
+  if(state.current) out += '<div id="cardbox" data-key="'+esc(state.current.key)+'">'+card(state.current)+'</div>';
+  out += '<div style="margin-top:24px">'+bulkSection()+'</div>';
+  return out;
+}
+function thumb(w){
+  return '<div class="thumb">'+(w.photo?'<img src="'+w.photo+'" alt="" style="width:100%;height:100%;object-fit:cover">':w.svg||'<div class="ph" style="background:'+phColor(w.key)+'">'+esc((w.word||"?").charAt(0).toUpperCase())+'</div>')+'</div>';
+}
+function wordsView(){
+  if(state.openKey && state.words[state.openKey]){
+    const w = state.words[state.openKey];
+    return '<button class="back" data-act="close">‹ All words</button><div id="cardbox" data-key="'+esc(w.key)+'">'+card(w,{readonly:true})+'</div>'+
+      '<div class="actions" style="margin-top:16px"><button class="btn ghost" data-act="delete" data-key="'+esc(w.key)+'">Delete this word</button></div>';
+  }
+  const q = state.search.trim().toLowerCase();
+  const keys = langKeys()
+    .filter(k=>!q || (state.words[k].word+" "+state.words[k].translation).toLowerCase().includes(q))
+    .sort((a,b)=>(state.words[b].added||0)-(state.words[a].added||0));
+  let out = '<h1>My '+LANGS[state.lang].name+' words</h1>'+
+    '<input type="search" id="search" placeholder="Search words" value="'+esc(state.search)+'" aria-label="Search words">';
+  if(!keys.length) out += '<div class="empty">'+(q?"No words match.":"Nothing saved yet. Add your first word from the Add tab.")+'</div>';
+  else out += '<div class="list">'+keys.map(k=>{
+    const w = state.words[k], d = dueLabel(w);
+    return '<button class="item" data-act="open" data-key="'+esc(k)+'">'+thumb(w)+
+      '<span><div class="w">'+(w.article?esc(w.article)+' ':'')+esc(w.word)+'</div><div class="g">'+esc(w.translation)+'</div></span>'+
+      '<span class="due'+(d.now?' now':'')+'">'+d.t+'</span></button>';
+  }).join("")+'</div>';
+  return out+backupView();
+}
+
+/* ---------- backup: export and import ---------- */
+function exportData(){
+  return JSON.stringify({app:"vivid-words", version:1, exported:new Date().toISOString(), words:Object.keys(state.words).map(k=>state.words[k])});
+}
+async function exportFile(){
+  const n = Object.keys(state.words).length;
+  if(!n){ state.backupMsg = "Nothing to export yet."; render(); return; }
+  const name = "vivid-words-"+new Date().toISOString().slice(0,10)+".json";
+  const blob = new Blob([exportData()], {type:"application/json"});
+  try{
+    const file = new File([blob], name, {type:"application/json"});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], title:"Vivid Words backup"});
+      state.backupMsg = "Shared "+n+" item"+(n>1?"s":"")+".";
+    }else{
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+      state.backupMsg = "Saved "+n+" item"+(n>1?"s":"")+" to a file.";
+    }
+  }catch(e){
+    state.backupMsg = e && e.name==="AbortError" ? "Save cancelled." : "Could not save a file here. Use Copy instead.";
+  }
+  render();
+}
+function normalizeWord(o){
+  if(!o || typeof o!=="object") return null;
+  if(typeof o.key!=="string" || !/^(nl|en)_[^\/]+$/.test(o.key) || typeof o.word!=="string") return null;
+  const str = v => typeof v==="string" ? v.slice(0,2000) : "";
+  const arr = (v,n) => Array.isArray(v) ? v.slice(0,n) : [];
+  const obj = v => v && typeof v==="object";
+  const w = {
+    key:o.key.slice(0,90), lang:o.key.slice(0,2), word:str(o.word), kind:o.kind==="phrase"?"phrase":"word",
+    pos:str(o.pos), article:str(o.article), ipa:str(o.ipa), translation:str(o.translation), meaning:str(o.meaning), forms:str(o.forms),
+    examples:arr(o.examples,3).filter(obj).map(e=>({t:str(e.t), en:str(e.en)})),
+    breakdown:arr(o.breakdown,5).filter(obj).map(b=>({part:str(b.part), note:str(b.note)})),
+    synonyms:arr(o.synonyms,3).map(str), tip:str(o.tip), note:str(o.note), mine:str(o.mine).slice(0,300), mineNote:str(o.mineNote).slice(0,600),
+    svg:"", photo:"",
+    box:Math.max(0, Math.min(INTERVALS.length-1, Number(o.box)||0)), due:Number(o.due)||0,
+    added:Number(o.added)||Date.now(), updated:Number(o.updated)||0
+  };
+  if(!w.word) return null;
+  if(typeof o.svg==="string" && o.svg) w.svg = cleanSvg(o.svg, w.key);
+  if(typeof o.photo==="string" && o.photo.length<400000 && /^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(o.photo)) w.photo = o.photo;
+  return w;
+}
+function importJSON(text){
+  let data;
+  try{ data = JSON.parse(text); }
+  catch(e){ state.backupMsg = "That is not a valid backup. Choose or paste the file you exported."; render(); return; }
+  const list = Array.isArray(data) ? data : (data && Array.isArray(data.words) ? data.words : null);
+  if(!list){ state.backupMsg = "That is not a valid backup. Choose or paste the file you exported."; render(); return; }
+  let added = 0, updated = 0, skipped = 0;
+  list.forEach(o=>{
+    const w = normalizeWord(o);
+    if(!w){ skipped++; return; }
+    const cur = state.words[w.key];
+    if(cur){ if((cur.updated||0) >= (w.updated||0)){ skipped++; return; } updated++; } else added++;
+    persist(w);
+  });
+  state.paste = "";
+  state.backupMsg = "Imported: "+added+" new, "+updated+" updated, "+skipped+" skipped.";
+  render();
+}
+function backupView(){
+  return '<section class="backup"><h2 class="h2">Move your words</h2>'+
+    '<p class="sub">Export here, then import on the other device. Importing never deletes anything: it adds new words and replaces older copies.</p>'+
+    '<div class="row"><button class="btn alt" data-act="export">Save file</button><button class="btn alt" data-act="copy">Copy</button></div>'+
+    '<div class="row" style="margin-top:12px"><button class="btn alt" data-act="importfile">Import file</button></div>'+
+    '<details style="margin-top:14px"><summary>Import by pasting</summary>'+
+    '<textarea id="paste" rows="4" placeholder="Paste the copied backup here" aria-label="Backup text">'+esc(state.paste)+'</textarea>'+
+    '<button class="btn alt" data-act="importpaste" style="width:100%;margin-top:10px">Import pasted text</button></details>'+
+    (state.backupMsg?'<div class="msg" style="margin-top:14px" role="status">'+esc(state.backupMsg)+'</div>':'')+
+  '</section>';
+}
+
+/* ---------- my own sentence ---------- */
+function mineBox(w){
+  const k = esc(w.key), busy = !!state.mineBusy[w.key], msg = state.mineMsg[w.key] || w.mineNote || "";
+  return '<div class="mine"><div class="label">My own sentence</div>'+
+    '<textarea id="mine" data-key="'+k+'" rows="2" maxlength="300" placeholder="Write a sentence you could really say, using this word" aria-label="My own sentence">'+esc(w.mine||"")+'</textarea>'+
+    '<button class="btn alt" data-act="minecheck" data-key="'+k+'" style="width:100%"'+(busy?' disabled':'')+'>'+(busy?'Checking…':'Check my sentence')+'</button>'+
+    (msg?'<div class="note mnote" role="status" style="margin-top:10px">'+esc(msg)+'</div>':'')+
+  '</div>';
+}
+let mineTimer = null;
+function liveMine(el){
+  const w = state.words[el.dataset.key]; if(!w) return;
+  w.mine = el.value.slice(0,300);
+  if(w.mineNote){ w.mineNote = ""; }
+  delete state.mineMsg[w.key];
+  const n = el.parentNode.querySelector(".mnote"); if(n) n.remove();
+  clearTimeout(mineTimer); mineTimer = setTimeout(()=>persist(w), 500);
+}
+async function checkMine(key){
+  const w = state.words[key]; if(!w || state.mineBusy[key]) return;
+  const ta = $("#mine");
+  if(ta && ta.dataset.key===key){ w.mine = ta.value.trim().slice(0,300); }
+  clearTimeout(mineTimer); persist(w);
+  const redo = ()=>{ if(state.tab==="cards") render(); else refreshCard(w); };
+  if(!w.mine){ state.mineMsg[key] = "Write a sentence first."; redo(); return; }
+  const sample = await getSample();
+  if(!sample){ state.mineMsg[key] = NEEDS_KEY; redo(); return; }
+  state.mineBusy[key] = true; delete state.mineMsg[key]; redo();
+  const L = w.lang==="nl" ? "Dutch (as spoken in the Netherlands)" : "American English";
+  const prompt = 'A learner of '+L+' wrote one sentence to practise the word or phrase "'+w.word+'" (meaning: '+w.meaning+').\n'+
+    'Sentence: "'+w.mine.replace(/"/g,"'")+'"\n\n'+
+    'Check that the word is used correctly and that the sentence sounds natural. Pay special attention to articles, prepositions, word order and word choice.\n'+
+    'Reply with JSON only, no other text: {"natural": true or false, "better": "a corrected or more natural version of the sentence, or an empty string if it is already fine", "note": "one short sentence in plain English naming the main fix, or an empty string"}';
+  try{
+    const res = await sample(prompt, {modelTier:"quick", maxTokens:400});
+    const j = parseJSON(res.text);
+    const parts = [];
+    parts.push(j.natural ? "Sounds natural." : "Not quite natural yet.");
+    if(j.better && String(j.better).trim() && String(j.better).trim()!==w.mine) parts.push("Try: "+String(j.better).trim());
+    if(j.note && String(j.note).trim()) parts.push(String(j.note).trim());
+    w.mineNote = parts.join(" ").slice(0,600);
+  }catch(e){
+    state.mineMsg[key] = apiErrMsg(e) || "Could not check that sentence. Try again.";
+  }
+  state.mineBusy[key] = false;
+  persist(w); redo();
+}
+
+/* ---------- speak practice: voice recording ---------- */
+let recStream = null, recMr = null, recChunks = [], recAudio = null;
+function stopRecPlay(){ if(recAudio){ try{ recAudio.pause(); }catch(e){} recAudio = null; } }
+function recStop(){ try{ if(recMr && recMr.state!=="inactive") recMr.stop(); }catch(e){} }
+function clearRec(){
+  const r = state.rec; state.rec = null;
+  recStop(); stopRecPlay();
+  if(r && r.url) try{ URL.revokeObjectURL(r.url); }catch(e){}
+}
+async function recStart(key){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder){ toast("This browser cannot record audio."); return; }
+  clearRec();
+  try{
+    recStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    recChunks = [];
+    const mr = recMr = new MediaRecorder(recStream);
+    mr.ondataavailable = e=>{ if(e.data && e.data.size) recChunks.push(e.data); };
+    mr.onstop = ()=>{
+      try{ recStream.getTracks().forEach(t=>t.stop()); }catch(e){}
+      if(state.rec && state.rec.key===key && recChunks.length){
+        const blob = new Blob(recChunks, {type: mr.mimeType || "audio/mp4"});
+        state.rec.url = URL.createObjectURL(blob); state.rec.status = "ready"; render();
+      }
+    };
+    state.rec = {key, status:"recording", url:""};
+    mr.start(); render();
+  }catch(e){ state.rec = null; toast("Microphone access was blocked. Allow it in your browser or phone settings, then try again."); render(); }
+}
+function recPlay(){
+  if(!state.rec || !state.rec.url) return;
+  stopRecPlay();
+  recAudio = new Audio(state.rec.url);
+  recAudio.play().catch(()=>toast("Could not play the recording."));
+}
+function recBar(w){
+  if(!navigator.mediaDevices || !window.MediaRecorder) return '';
+  const r = state.rec && state.rec.key===w.key ? state.rec : null, k = esc(w.key);
+  let b;
+  if(r && r.status==="recording") b = '<button class="btn recording" data-act="recstop">■ Stop recording</button>';
+  else if(r && r.status==="ready") b = '<button class="btn alt" data-act="recplay">▶ My voice</button><button class="btn ghost" data-act="rec" data-key="'+k+'">Record again</button>';
+  else b = '<button class="btn alt" data-act="rec" data-key="'+k+'">● Record my voice</button>';
+  return '<div class="recbar">'+b+'</div>';
+}
+function maskWord(t, w){
+  if(!t || !w.word) return t || "";
+  try{ return String(t).replace(new RegExp(w.word.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"ig"), "…"); }catch(e){ return t; }
+}
+function hintFor(w){
+  const x = w.word;
+  return w.kind==="phrase" ? x.split(/\s+/)[0]+" …" : x.charAt(0)+" "+Array(Math.max(0,x.length-1)).fill("_").join(" ");
+}
+function speakFront(w){
+  return '<article class="card"><div class="front"><div class="label" style="text-align:center">Say it out loud</div>'+
+    (w.translation?'<span class="gloss">'+esc(maskWord(w.translation,w))+'</span>':'')+
+    '<p class="meaning">'+esc(maskWord(w.meaning,w))+'</p>'+
+    (state.hint?'<p class="ipa">'+esc(hintFor(w))+'</p>':'')+
+    '<p>Which word is this? Use it in a sentence of your own, out loud. Then check.</p></div></article>'+
+    recBar(w)+
+    '<div class="row" style="margin-top:18px"><button class="btn alt" data-act="hint">Hint</button><button class="btn" data-act="reveal">Show answer</button></div>';
+}
+function modesBar(act, cur, items){
+  return '<div class="modes" role="group">'+items.map(i=>'<button data-act="'+act+'" data-v="'+i[0]+'" aria-pressed="'+(cur===i[0])+'">'+i[1]+'</button>').join("")+'</div>';
+}
+
+/* ---------- flashcards ---------- */
+function flashBack(w){
+  const art = artHtml(w, w.drawing), k = esc(w.key), hasPic = !!(w.svg||w.photo);
+  const ex = (w.examples||[]).slice(0,2).map((e,i)=>'<li><div class="exrow"><div class="t">'+esc(e.t)+'</div>'+spkBtn(w.key,i)+'</div>'+(e.en?'<div class="en">'+esc(e.en)+'</div>':'')+'</li>').join("");
+  return '<article class="card"><div class="art'+(art?'':' empty')+'">'+art+'</div><div class="body">'+
+    '<div class="wordrow"><h2 class="word'+(w.kind==="phrase"?' long':'')+'">'+(w.article?'<span class="de">'+esc(w.article)+'</span>':'')+esc(w.word)+'</h2>'+spkBtn(w.key)+'</div>'+
+    (w.translation?'<span class="gloss">'+esc(w.translation)+'</span>':'')+
+    '<p class="meaning">'+esc(w.meaning)+'</p>'+
+    (ex?'<ul class="ex">'+ex+'</ul>':'')+
+    mineBox(w)+
+    '<div class="pic">'+
+      '<button class="btn ghost" data-act="draw" data-key="'+k+'"'+(w.drawing?' disabled':'')+'>'+(w.drawing?'Drawing…':(w.svg?'New drawing':'Draw a picture'))+'</button>'+
+      '<button class="btn ghost" data-act="photo" data-key="'+k+'">'+(w.photo?'Change photo':'My photo')+'</button>'+
+      (hasPic?'<button class="btn ghost" data-act="nopic" data-key="'+k+'">Remove</button>':'')+
+    '</div>'+(state.picErr[w.key]?'<div class="note" role="alert">'+esc(state.picErr[w.key])+'</div>':'')+
+  '</div></article>';
+}
+function studyView(){
+  const s = state.study, all = langKeys();
+  if(!s){
+    const due = dueKeys();
+    if(!all.length) return '<h1>Flashcards</h1><div class="empty">Save a few words first. Every saved word becomes a card.</div>';
+    return '<h1>Flashcards</h1><p class="sub">'+all.length+' '+LANGS[state.lang].name+' card'+(all.length>1?'s':'')+'. Cards you miss come back sooner. Cards you know come back after a longer gap.</p>'+
+      modesBar("smode", state.speakMode?"1":"0", [["0","Recognise"],["1","Speak"]])+'<p class="sub" style="margin-top:-6px">'+(state.speakMode?"Speak: you see the meaning, say a sentence with the word out loud, then check.":"Recognise: you see the word and recall its meaning.")+'</p>'+'<div class="stack"><button class="btn" data-act="study" data-mode="due"'+(due.length?'':' disabled')+'>Study due cards ('+due.length+')</button>'+
+      '<button class="btn alt" data-act="study" data-mode="all">Study all cards ('+all.length+')</button></div>'+
+      (due.length?'':'<p class="sub" style="margin-top:14px">Nothing is due right now. You can still go through all of them.</p>');
+  }
+  if(s.i>=s.queue.length){
+    return '<h1>Done</h1><p class="sub">You went through '+s.total+' card'+(s.total>1?'s':'')+' and knew '+s.got+' of them.</p><button class="btn" data-act="sfinish" style="width:100%">Back to flashcards</button>';
+  }
+  const w = state.words[s.queue[s.i]];
+  const pct = Math.round(s.i/s.queue.length*100);
+  let out = '<div class="progress" role="progressbar" aria-valuenow="'+pct+'" aria-valuemin="0" aria-valuemax="100"><i style="width:'+pct+'%"></i></div>';
+  if(!s.revealed && s.speak){
+    out += speakFront(w);
+  }else if(!s.revealed){
+    out += '<article class="card"><div class="front"><div class="meta" style="justify-content:center">'+(w.pos?esc(w.pos):'')+'</div>'+
+      '<div class="wordrow"><h2 class="word'+(w.kind==="phrase"?' long':'')+'">'+(w.article?'<span class="de">'+esc(w.article)+'</span>':'')+esc(w.word)+'</h2>'+spkBtn(w.key)+'</div>'+
+      (w.ipa?'<p class="ipa">/'+esc(String(w.ipa).replace(/^\/|\/$/g,""))+'/</p>':'')+
+      '<p>What does it mean? Say it in your head first.</p></div></article>'+
+      '<div class="actions" style="margin-top:18px"><button class="btn" data-act="reveal">Show answer</button></div>';
+  }else{
+    out += flashBack(w)+(s.speak?recBar(w):'')+
+      '<div class="row" style="margin-top:18px"><button class="btn alt" data-act="rate" data-r="0">Not yet</button><button class="btn good" data-act="rate" data-r="1">Got it</button></div>';
+  }
+  return out;
+}
+
+/* ---------- quiz ---------- */
+function blankIn(w){
+  if(w.kind==="phrase") return null;
+  const cands = [];
+  (w.examples||[]).forEach(e=>{ if(e && e.t) cands.push({t:e.t, en:e.en||""}); });
+  if(w.mine) cands.push({t:w.mine, en:""});
+  shuffle(cands);
+  const re = new RegExp("(^|[^\\p{L}])"+w.word.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"(?![\\p{L}])","iu");
+  for(const c of cands){
+    if(re.test(c.t)) return {t:c.t.replace(re,(m,p)=>p+"_____"), en:c.en};
+  }
+  return null;
+}
+function norm(x){ return String(x||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^\p{L}\p{N}]+/gu," ").trim(); }
+function buildQuiz(mode){
+  const keys = langKeys();
+  let pool = keys.slice();
+  const clozes = {};
+  keys.forEach(k=>{ clozes[k] = blankIn(state.words[k]); });
+  if(mode==="type") pool = keys.filter(k=>clozes[k]);
+  if(!pool.length) return null;
+  const picks = shuffle(pool.slice()).slice(0,10);
+  const qs = picks.map(k=>{
+    const w = state.words[k], cloze = clozes[k];
+    let types;
+    if(mode==="type") types = ["type"];
+    else if(mode==="choice"){ types = ["w2t","t2w"]; if(cloze) types.push("cloze"); }
+    else { types = ["w2t","t2w"]; if(cloze) types.push("cloze","type","type"); }
+    const type = types[Math.floor(Math.random()*types.length)];
+    if(type==="type") return {k, type, cloze, opts:[], answer:-1};
+    const labelOf = x => type==="w2t" ? state.words[x].translation : wordLabel(state.words[x]);
+    const used = [labelOf(k)], opts = [{k, label:labelOf(k)}];
+    shuffle(keys.filter(x=>x!==k)).forEach(x=>{
+      if(opts.length>=4) return;
+      const l = labelOf(x);
+      if(l && used.indexOf(l)<0){ used.push(l); opts.push({k:x, label:l}); }
+    });
+    shuffle(opts);
+    return {k, type, cloze, opts, answer:opts.findIndex(o=>o.k===k)};
+  });
+  return {qs, i:0, score:0, picked:null, result:null, typed:"", hint:false, missed:[]};
+}
+function quizView(){
+  const qz = state.quiz, all = langKeys();
+  if(!qz){
+    if(all.length<4) return '<h1>Quiz</h1><div class="empty">Save at least 4 '+LANGS[state.lang].name+' words to unlock the quiz. You have '+all.length+'.</div>';
+    return '<h1>Quiz</h1><p class="sub">Up to 10 questions from your saved words. A word you get wrong becomes due in your flashcards again.</p>'+
+      modesBar("qmode", state.quizMode, [["choice","Choose"],["type","Type it"],["mixed","Mixed"]])+
+      '<p class="sub" style="margin-top:-6px">'+(state.quizMode==="choice"?"Pick the right answer from four options.":state.quizMode==="type"?"Type the missing word in a sentence. Uses your example sentences and your own sentences.":"A mix of both.")+'</p>'+
+      (state.quizMsg?'<div class="msg" role="status" style="margin-bottom:14px">'+esc(state.quizMsg)+'</div>':'')+
+      '<button class="btn" data-act="quizstart" style="width:100%">Start quiz</button>';
+  }
+  if(qz.i>=qz.qs.length){
+    const miss = qz.missed.map(k=>'<li>'+esc(wordLabel(state.words[k]))+' <span class="g">'+esc(state.words[k].translation)+'</span></li>').join("");
+    return '<h1>'+qz.score+' / '+qz.qs.length+'</h1><p class="sub">'+(qz.missed.length?'Words to look at again:':'Everything right. Nice.')+'</p>'+
+      (miss?'<ul class="missed">'+miss+'</ul>':'')+
+      '<div class="stack"><button class="btn" data-act="quizstart">Play again</button><button class="btn alt" data-act="quizfinish">Done</button></div>';
+  }
+  const q = qz.qs[qz.i], w = state.words[q.k], L = LANGS[state.lang].name;
+  const pct = Math.round(qz.i/qz.qs.length*100);
+  let prompt;
+  if(q.type==="w2t") prompt = 'What does <span class="qword">'+esc(wordLabel(w))+'</span> mean?';
+  else if(q.type==="t2w") prompt = 'Which '+L+' word means <span class="qword">“'+esc(w.translation)+'”</span>?';
+  else if(q.type==="type") prompt = 'Type the missing word.<div class="cloze">'+esc(q.cloze.t)+(q.cloze.en?'<div class="en">'+esc(q.cloze.en)+'</div>':'')+'</div>'+
+    ((w.translation||w.meaning)?'<p class="qclue">Clue: '+esc(maskWord(w.translation||w.meaning,w))+'</p>':'')+(qz.hint?'<p class="qclue">Starts with “'+esc(w.word.charAt(0))+'”, '+w.word.length+' letters.</p>':'');
+  else prompt = 'Which word fits the blank?<div class="cloze">'+esc(q.cloze.t)+(q.cloze.en?'<div class="en">'+esc(q.cloze.en)+'</div>':'')+'</div>';
+  const done = qz.picked!==null || qz.result!==null;
+  let out = '<div class="progress" role="progressbar" aria-valuenow="'+pct+'" aria-valuemin="0" aria-valuemax="100"><i style="width:'+pct+'%"></i></div>'+
+    '<div class="qcard"><div class="qtext">'+prompt+'</div>'+(q.type==="type"?'':'<div class="opts">')+
+    (q.type==="type"?'':q.opts.map((o,i)=>{
+      let c = "opt";
+      if(done){ if(i===q.answer) c += " ok"; else if(i===qz.picked) c += " no"; }
+      return '<button class="'+c+'" data-act="pick" data-i="'+i+'"'+(done?' disabled':'')+'>'+esc(o.label)+'</button>';
+    }).join(""))+(q.type==="type"?'':'</div>')+'</div>';
+  if(q.type==="type" && !done){
+    out += '<form id="tf"><input type="text" id="typed" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type the word" value="'+esc(qz.typed)+'" aria-label="Your answer"><button class="btn" type="submit">Check</button>'+
+      '<div class="row"><button type="button" class="btn ghost" data-act="qhint">Hint</button><button type="button" class="btn ghost" data-act="qgiveup">I do not know</button></div></form>';
+  }
+  if(done){
+    const right = q.type==="type" ? qz.result==="ok" : qz.picked===q.answer;
+    out += '<div class="msg" style="margin-top:14px"><b>'+(right?'Correct.':'Not quite.')+'</b> '+esc(wordLabel(w))+': '+esc(w.meaning)+
+      (q.type==="type" && !right && qz.typed.trim() ? '<div class="note" style="margin-top:6px">You typed: '+esc(qz.typed.trim())+'</div>':'')+'</div>'+
+      '<div class="actions" style="margin-top:14px"><button class="btn" data-act="qnext">'+(qz.i+1>=qz.qs.length?'See score':'Next')+'</button></div>';
+  }
+  return out;
+}
+
+function render(){
+  $("#langs").innerHTML = Object.keys(LANGS).map(k=>'<button data-act="lang" data-lang="'+k+'" aria-pressed="'+(state.lang===k)+'">'+LANGS[k].label+'</button>').join("");
+  document.querySelectorAll(".tab").forEach(t=>{ if(t.dataset.tab===state.tab) t.setAttribute("aria-current","page"); else t.removeAttribute("aria-current"); });
+  const n = dueKeys().length, badge = $("#due-n");
+  badge.textContent = n; badge.hidden = !n;
+  const v = $("#view");
+  const warn = state.storageWarn ? '<div class="msg err" role="alert" style="margin-bottom:16px">Your words could not be saved on this device (private browsing or full storage). Export a backup from the Words tab.</div>' : '';
+  v.innerHTML = warn + (state.tab==="add" ? addView() : state.tab==="words" ? wordsView() : state.tab==="cards" ? studyView() : state.tab==="quiz" ? quizView() : settingsView());
+  if(state.tab==="quiz" && state.quiz){ const t = $("#typed"); if(t){ try{ t.focus({preventScroll:true}); }catch(e){} } }
+}
+
+
+/* ---------- speech (the phone's own voices) ---------- */
+let voicesList = [];
+function loadVoices(){ try{ voicesList = speechSynthesis.getVoices() || []; }catch(e){} }
+if("speechSynthesis" in window){
+  loadVoices();
+  try{ speechSynthesis.addEventListener("voiceschanged", loadVoices); }catch(e){}
+}
+const ICON_SPK = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+function spkBtn(key, i){
+  return '<button class="spk" data-act="say" data-key="'+esc(key)+'"'+(i!=null?' data-i="'+i+'"':'')+' aria-label="Play pronunciation">'+ICON_SPK+'</button>';
+}
+function toast(msg){
+  const t = $("#toast"); if(!t) return;
+  t.textContent = msg; t.style.display = "block";
+  clearTimeout(toast.h); toast.h = setTimeout(()=>{ t.style.display = "none"; }, 4000);
+}
+function pickVoice(lang){
+  const tag = lang==="nl" ? "nl-NL" : "en-US";
+  const list = voicesList.filter(v=>String(v.lang||"").replace("_","-")===tag);
+  const best = list.find(v=>/premium|enhanced|natural|neural/i.test(v.name)) || list.find(v=>/google/i.test(v.name)) || list[0] || null;
+  return {tag, voice:best};
+}
+function speak(text, lang){
+  if(!text) return;
+  if(!("speechSynthesis" in window)){ toast("This browser cannot speak."); return; }
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    const p = pickVoice(lang);
+    u.lang = p.tag;
+    if(p.voice) u.voice = p.voice;
+    else if(voicesList.length) toast("No "+(lang==="nl"?"Dutch (Netherlands)":"US English")+" voice found on this device. Install one in your phone's speech settings.");
+    u.rate = settings.rate || 0.9;
+    speechSynthesis.speak(u);
+  }catch(e){ toast("Could not play the sound."); }
+}
+function sayWord(w){ speak((w.article?w.article+" ":"")+w.word, w.lang); }
+
+/* ---------- bulk add ---------- */
+function fullPrompt(text, lang){
+  const L = LANGS[lang].name, nl = lang==="nl";
+  const ex = nl ? '{"t": a natural Dutch sentence, "en": its English translation}' : '{"t": a natural English sentence}';
+  if(isPhrase(text)) return 'A learner met this '+L+' sentence or phrase in a book: "'+text+'". Explain it in plain English at about B1 level. Reply with ONLY one JSON object, no markdown, using these keys: '+
+    '"word": the text as given with obvious typos fixed; "pos": "phrase", "sentence" or "idiom"; "translation": a natural English rendering; '+
+    '"meaning": one or two plain English sentences on what it means and when it is used (for an idiom give the literal meaning and the real meaning); '+
+    '"breakdown": up to 5 objects {"part": a word or chunk from the text, "note": a short plain English note on its meaning or grammar}; '+
+    '"examples": 2 objects '+ex+' that use the same structure; "synonyms": up to 2 other ways to say it in '+L+'; "tip": one short memory hook. '+
+    'If the text is not valid '+L+', return {"error":"short reason"}.';
+  return 'A learner met the '+L+' word "'+text+'" in a book. Explain it in plain English at about B1 level. Reply with ONLY one JSON object, no markdown, using these keys: '+
+    '"word": the dictionary headword (Dutch nouns without the article, verbs in the infinitive); "pos": noun, verb, adjective, adverb or similar; '+
+    '"article": "de" or "het" for Dutch nouns, otherwise an empty string; "translation": 1 to 3 plain English words; '+
+    '"meaning": one or two plain English sentences, with a note on register if it is formal, literary or informal, and a mention if the input was an inflected form; '+
+    '"ipa": '+(nl?'pronunciation in IPA for standard Netherlands Dutch':'pronunciation in IPA for General American English, not British')+'; '+
+    '"forms": '+(nl?'plural and diminutive for nouns, infinitive, simple past and past participle for verbs, comparative for adjectives':'irregular inflections only')+', or an empty string; '+
+    '"examples": 3 objects '+ex+'; "synonyms": up to 3 '+L+' words; "tip": one short memory hook such as a similar English word or the parts of the word. '+
+    'If it is not a real '+L+' word, return {"error":"short reason"}.';
+}
+function buildWord(d, lang, typed, note, key){
+  const arr = (v,n) => Array.isArray(v) ? v.slice(0,n) : [];
+  return {
+    key, lang, word:String(d.word||typed), kind:isPhrase(typed)?"phrase":"word", pos:String(d.pos||""), article:String(d.article||""),
+    ipa:String(d.ipa||""), translation:String(d.translation||""), meaning:String(d.meaning||""), forms:String(d.forms||""),
+    examples:arr(d.examples,3).filter(e=>e&&e.t).map(e=>({t:String(e.t), en:e.en?String(e.en):""})),
+    breakdown:arr(d.breakdown,5).filter(b=>b&&b.part).map(b=>({part:String(b.part), note:String(b.note||"")})),
+    synonyms:arr(d.synonyms,3).map(String), tip:String(d.tip||""), note:note||"",
+    svg:"", photo:"", box:0, due:Date.now(), added:Date.now()
+  };
+}
+function parseBulk(text){
+  const seen = {}, items = [];
+  String(text).split(/\r?\n/).forEach(line=>{
+    let l = line.trim().replace(/^(?:[-*•]\s+|\d+[.)]\s+)/,"");
+    if(!l) return;
+    const parts = l.split("|");
+    const t = parts[0].trim().slice(0,300), note = (parts[1]||"").trim().slice(0,200);
+    if(!t) return;
+    const k = slug(t);
+    if(seen[k]) return;
+    seen[k] = true; items.push({text:t, note});
+  });
+  return items;
+}
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+async function bulkOne(it, lang, sample, b){
+  const typedKey = (lang+"_"+slug(it.text)).slice(0,90);
+  if(state.words[typedKey]){ b.skipped++; return; }
+  const cached = state.cache[typedKey] && state.cache[typedKey].w;
+  if(cached){
+    if(state.words[cached.key]){ b.skipped++; return; }
+    const w = Object.assign({}, cached, {svg:"", photo:"", examples:(cached.examples||[]).slice(), note:it.note||cached.note||"", box:0, due:Date.now(), added:Date.now()});
+    persist(w); b.added++; return;
+  }
+  let res;
+  try{ res = await sample(fullPrompt(it.text, lang), {modelTier:"quick", maxTokens:1400}); }
+  catch(e){
+    if(e && (e.code==="rate_limited" || e.code==="busy")){ await sleep(4000); res = await sample(fullPrompt(it.text, lang), {modelTier:"quick", maxTokens:1400}); }
+    else throw e;
+  }
+  const d = parseJSON(res.text);
+  if(d.error) throw new Error(String(d.error));
+  const key = (lang+"_"+slug(d.word||it.text)).slice(0,90);
+  if(state.words[key]){ b.skipped++; return; }
+  const w = buildWord(d, lang, it.text, it.note, key);
+  persist(w); putCache(typedKey, w); b.added++;
+}
+async function runBulk(){
+  if(state.bulk && state.bulk.running) return;
+  const items = parseBulk(state.bulkText);
+  if(!items.length){ state.bulk = {running:false, total:0, done:0, added:0, skipped:0, failed:[], msg:"Paste at least one word first."}; render(); return; }
+  const sample = await getSample();
+  if(!sample){ state.error = NEEDS_KEY; render(); return; }
+  const lang = state.lang;
+  const b = state.bulk = {running:true, stop:false, total:items.length, done:0, added:0, skipped:0, failed:[], msg:"", lang};
+  const processed = {};
+  render();
+  let next = 0;
+  const worker = async () => {
+    while(!b.stop){
+      const i = next++;
+      if(i>=items.length) break;
+      try{ await bulkOne(items[i], lang, sample, b); processed[i] = true; }
+      catch(e){
+        const fatal = e && (e.code==="bad_key" || e.code==="no_credit" || e.code==="network");
+        if(fatal){ b.stop = true; b.msg = apiErrMsg(e); }
+        else { processed[i] = true; b.failed.push({i, text:items[i].text, note:items[i].note, err:apiErrMsg(e) || (e && e.message && e.message!=="No JSON" ? e.message : "no answer")}); }
+        if(fatal) break;
+      }
+      b.done++; bulkRefresh();
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  b.running = false;
+  const left = items.filter((it,i)=>!processed[i] || b.failed.some(f=>f.i===i));
+  state.bulkText = left.map(it=>it.text+(it.note?" | "+it.note:"")).join("\n");
+  if(b.stop && !b.msg) b.msg = "Stopped.";
+  render();
+}
+function bulkHtml(){
+  const b = state.bulk;
+  if(!b) return "";
+  if(b.msg && !b.total) return '<div class="bulkstat" role="status">'+esc(b.msg)+'</div>';
+  const pct = b.total ? Math.round(b.done/b.total*100) : 0;
+  let out = '<div class="progress" style="margin-top:12px" role="progressbar" aria-valuenow="'+pct+'" aria-valuemin="0" aria-valuemax="100"><i style="width:'+pct+'%"></i></div>'+
+    '<div class="bulkstat" role="status">'+b.done+' of '+b.total+' done. Added '+b.added+(b.skipped?', already saved '+b.skipped:'')+(b.failed.length?', failed '+b.failed.length:'')+'.</div>';
+  if(b.running) out += '<button class="btn ghost" data-act="bulkstop" style="margin-top:10px">Stop</button>';
+  if(b.msg) out += '<div class="msg err" role="alert" style="margin-top:10px">'+esc(b.msg)+'</div>';
+  if(!b.running && b.failed.length) out += '<ul class="failed">'+b.failed.map(f=>'<li>'+esc(f.text)+': '+esc(f.err)+'</li>').join("")+'</ul><div class="hint" style="margin-top:6px">The lines that did not finish are back in the box. Press Add all to retry them.</div>';
+  return out;
+}
+function bulkRefresh(){ const box = $("#bulkbox"); if(box) box.innerHTML = bulkHtml(); }
+function bulkSection(){
+  const running = !!(state.bulk && state.bulk.running);
+  return '<details class="bulk" id="bulkdetails"'+(state.bulkOpen||state.bulk?' open':'')+'><summary>Add many words at once</summary>'+
+    '<p class="sub" style="margin-top:10px">One word or phrase per line, in '+LANGS[state.lang].name+'. Put where you saw it after a | if you like. They are looked up and saved automatically.</p>'+
+    '<textarea id="bulktext" rows="7" placeholder="'+(state.lang==="nl"?"gezellig&#10;de fiets&#10;het is mij een raadsel | The Martian":"ephemeral&#10;to get the hang of it | chapter 3")+'" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Words to add">'+esc(state.bulkText)+'</textarea>'+
+    '<button class="btn" data-act="bulkstart"'+(running?' disabled':'')+' style="width:100%">'+(running?"Adding…":"Add all")+'</button>'+
+    '<div id="bulkbox">'+bulkHtml()+'</div></details>';
+}
+
+/* ---------- settings ---------- */
+function settingsView(){
+  const opt = (v,l,cur) => '<option value="'+v+'"'+(cur===v?' selected':'')+'>'+l+'</option>';
+  return '<h1>Settings</h1>'+
+    '<div class="field"><label for="apikey">Anthropic API key</label>'+
+    '<input type="password" id="apikey" placeholder="sk-ant-..." autocomplete="off" autocapitalize="off" spellcheck="false" value="'+esc(settings.key)+'">'+
+    '<p class="hint">Stored only in this browser on this device and sent only to api.anthropic.com. Create the key in the Anthropic Console and set a monthly spend limit there.</p>'+
+    '<div class="row" style="margin-top:6px"><button class="btn alt" data-act="savekey">Save key</button><button class="btn alt" data-act="testkey">Test key</button></div></div>'+
+    '<div class="field"><label for="lookupmodel">Model for lookups</label><select id="lookupmodel">'+
+      opt("claude-haiku-5-5","Haiku 5.5 (fastest, cheapest)",settings.lookupModel)+opt("claude-sonnet-5-5","Sonnet 5.5 (more careful)",settings.lookupModel)+'</select></div>'+
+    '<div class="field"><label for="drawmodel">Model for drawing pictures</label><select id="drawmodel">'+
+      opt("claude-sonnet-5-5","Sonnet 5.5 (better pictures)",settings.drawModel)+opt("claude-haiku-5-5","Haiku 5.5 (cheaper)",settings.drawModel)+'</select></div>'+
+    '<div class="field"><label for="rate">Speaking speed</label><input type="range" id="rate" min="0.6" max="1.2" step="0.05" value="'+settings.rate+'">'+
+    '<div class="row"><button class="btn alt" data-act="testvoice" data-lang="nl">Hear Dutch</button><button class="btn alt" data-act="testvoice" data-lang="en">Hear English</button></div></div>'+
+    '<div class="field"><label>Keep my words safe</label><p class="hint">Words live in this browser only. Ask the browser not to clear them, and export a backup now and then.</p>'+
+    '<button class="btn alt" data-act="persist">Protect and check storage</button></div>'+
+    (state.settingsMsg?'<div class="msg" role="status">'+esc(state.settingsMsg)+'</div>':'');
+}
+async function testKey(){
+  settings.key = ($("#apikey").value||"").trim(); saveSettings();
+  if(!settings.key){ state.settingsMsg = "Enter a key first."; render(); return; }
+  state.settingsMsg = "Testing…"; render();
+  try{ await callApi("Reply with the single word ok.", {modelTier:"quick", maxTokens:16}); state.settingsMsg = "The key works."; }
+  catch(e){ state.settingsMsg = apiErrMsg(e) || ("The test failed: "+(e&&e.message?e.message:"unknown error")); }
+  render();
+}
+async function protectStorage(){
+  let msg = "";
+  try{
+    const ok = navigator.storage && navigator.storage.persist ? await navigator.storage.persist() : false;
+    msg = ok ? "The browser will keep your words." : "The browser did not promise to keep your data. Add this app to your Home Screen and keep backups.";
+    if(navigator.storage && navigator.storage.estimate){
+      const e = await navigator.storage.estimate();
+      msg += " Using "+((e.usage||0)/1048576).toFixed(1)+" MB of about "+Math.round((e.quota||0)/1048576)+" MB.";
+    }
+  }catch(e){ msg = "Could not check storage here."; }
+  state.settingsMsg = msg; render();
+}
+
+function typedFinish(ok){
+  const qz = state.quiz, q = qz.qs[qz.i], w = state.words[q.k];
+  qz.result = ok ? "ok" : "no";
+  if(ok) qz.score++;
+  else { qz.missed.push(q.k); if(w){ w.box = 0; w.due = Date.now(); persist(w); } }
+  render();
+}
+function checkTyped(){
+  const qz = state.quiz; if(!qz || qz.result!==null) return;
+  const q = qz.qs[qz.i], w = state.words[q.k];
+  if(!qz.typed.trim()) return;
+  typedFinish(norm(qz.typed)===norm(w.word));
+}
+
+/* ---------- events ---------- */
+document.addEventListener("submit", e=>{ if(e.target.id==="f"){ e.preventDefault(); lookup(); } else if(e.target.id==="tf"){ e.preventDefault(); checkTyped(); } });
+document.addEventListener("input", e=>{
+  if(e.target.id==="w") state.q = e.target.value;
+  else if(e.target.id==="note") state.note = e.target.value;
+  else if(e.target.id==="paste") state.paste = e.target.value;
+  else if(e.target.id==="bulktext") state.bulkText = e.target.value;
+  else if(e.target.id==="mine") liveMine(e.target);
+  else if(e.target.id==="typed"){ if(state.quiz) state.quiz.typed = e.target.value; }
+  else if(e.target.id==="rate"){ settings.rate = Number(e.target.value)||0.9; saveSettings(); }
+  else if(e.target.id==="search"){
+    state.search = e.target.value;
+    const pos = e.target.selectionStart;
+    render();
+    const s = $("#search"); if(s){ s.focus(); try{ s.setSelectionRange(pos,pos); }catch(x){} }
+  }
+});
+document.addEventListener("click", e=>{
+  const b = e.target.closest("[data-act]"); if(!b) return;
+  const a = b.dataset.act;
+  if(a==="lang"){ clearRec(); state.lang = b.dataset.lang; lsSet("vw-lang", state.lang); state.current=null; state.error=""; state.openKey=null; state.study=null; state.quiz=null; state.q=""; state.note=""; render(); }
+  else if(a==="tab"){ clearRec(); state.tab = b.dataset.tab; state.openKey = null; render(); window.scrollTo(0,0); }
+  else if(a==="save"){ if(state.current){ persist(state.current); render(); } }
+  else if(a==="open"){ state.openKey = b.dataset.key; render(); window.scrollTo(0,0); }
+  else if(a==="close"){ state.openKey = null; render(); }
+  else if(a==="delete"){
+    if(b.dataset.armed){ remove(b.dataset.key); state.openKey = null; render(); }
+    else { b.dataset.armed = "1"; b.textContent = "Tap again to delete"; }
+  }
+  else if(a==="draw"){ const w = state.words[b.dataset.key]; if(w && !w.drawing) drawArt(w); }
+  else if(a==="photo"){ state.photoKey = b.dataset.key; const f=$("#photo"); if(f) f.click(); }
+  else if(a==="nopic"){ const w = state.words[b.dataset.key]; if(w){ w.svg=""; w.photo=""; persist(w); refreshCard(w); } }
+  else if(a==="settings"){ state.tab = state.tab==="settings" ? "add" : "settings"; state.settingsMsg = ""; render(); window.scrollTo(0,0); }
+  else if(a==="savekey"){ settings.key = ($("#apikey").value||"").trim(); saveSettings(); state.settingsMsg = settings.key ? "Key saved on this device." : "Key removed."; render(); }
+  else if(a==="testkey"){ testKey(); }
+  else if(a==="testvoice"){ speak(b.dataset.lang==="nl" ? "Dit is een test van de Nederlandse stem." : "This is a test of the American English voice.", b.dataset.lang); }
+  else if(a==="persist"){ protectStorage(); }
+  else if(a==="say"){
+    const k = b.dataset.key;
+    const w = state.words[k] || (state.current && state.current.key===k ? state.current : null);
+    if(w){ if(b.dataset.i!=null && w.examples && w.examples[b.dataset.i]) speak(w.examples[b.dataset.i].t, w.lang); else sayWord(w); }
+  }
+  else if(a==="bulkstart"){ runBulk(); }
+  else if(a==="bulkstop"){ if(state.bulk) state.bulk.stop = true; }
+  else if(a==="export"){ exportFile(); }
+  else if(a==="copy"){
+    const n = Object.keys(state.words).length;
+    if(!n){ state.backupMsg = "Nothing to copy yet."; render(); return; }
+    let p;
+    try{ p = navigator.clipboard.writeText(exportData()); }catch(x){ p = Promise.reject(x); }
+    p.then(()=>{ state.backupMsg = "Copied "+n+" item"+(n>1?"s":"")+". Paste them on the other device under Import by pasting."; render(); })
+     .catch(()=>{ state.backupMsg = "Copy was blocked here. Use Save file instead."; render(); });
+  }
+  else if(a==="importfile"){ const f=$("#importfile"); if(f) f.click(); }
+  else if(a==="importpaste"){ if(state.paste.trim()) importJSON(state.paste); else { state.backupMsg = "Paste the backup text first."; render(); } }
+  else if(a==="study"){
+    const q = b.dataset.mode==="due" ? dueKeys() : shuffle(langKeys());
+    if(q.length){ clearRec(); state.hint = false; state.study = {queue:q, i:0, revealed:false, total:q.length, got:0, speak:state.speakMode}; render(); window.scrollTo(0,0); }
+  }
+  else if(a==="reveal"){ recStop(); state.study.revealed = true; render(); }
+  else if(a==="smode"){ state.speakMode = b.dataset.v==="1"; lsSet("vw-speak", state.speakMode?"1":"0"); render(); }
+  else if(a==="hint"){ state.hint = true; render(); }
+  else if(a==="rec"){ recStart(b.dataset.key); }
+  else if(a==="recstop"){ recStop(); }
+  else if(a==="recplay"){ recPlay(); }
+  else if(a==="minecheck"){ checkMine(b.dataset.key); }
+  else if(a==="qmode"){ state.quizMode = b.dataset.v; lsSet("vw-qmode", state.quizMode); state.quizMsg = ""; render(); }
+  else if(a==="qhint"){ if(state.quiz){ state.quiz.hint = true; render(); } }
+  else if(a==="qgiveup"){ if(state.quiz && state.quiz.result===null) typedFinish(false); }
+  else if(a==="rate"){
+    const s = state.study, k = s.queue[s.i], w = state.words[k];
+    if(b.dataset.r==="1"){ s.got++; w.box = Math.min((w.box||0)+1, INTERVALS.length-1); w.due = Date.now()+INTERVALS[w.box]*DAY; }
+    else { w.box = 0; w.due = Date.now()+10*60*1000; if(s.queue.filter(x=>x===k).length<2) s.queue.push(k); }
+    persist(w); s.i++; s.revealed = false; state.hint = false; clearRec(); render(); window.scrollTo(0,0);
+  }
+  else if(a==="sfinish"){ clearRec(); state.study = null; render(); }
+  else if(a==="quizstart"){
+    const qz = buildQuiz(state.quizMode);
+    if(!qz){ state.quizMsg = "Typed questions need a saved example sentence that contains the word. Save more words, write your own sentences, or switch to Choose."; state.quiz = null; }
+    else { state.quizMsg = ""; state.quiz = qz; }
+    render(); window.scrollTo(0,0);
+  }
+  else if(a==="pick"){
+    const qz = state.quiz; if(!qz || qz.picked!==null) return;
+    const q = qz.qs[qz.i]; qz.picked = Number(b.dataset.i);
+    if(qz.picked===q.answer) qz.score++;
+    else { qz.missed.push(q.k); const w = state.words[q.k]; if(w){ w.box = 0; w.due = Date.now(); persist(w); } }
+    render();
+  }
+  else if(a==="qnext"){ const qz = state.quiz; qz.i++; qz.picked = null; qz.result = null; qz.typed = ""; qz.hint = false; render(); window.scrollTo(0,0); }
+  else if(a==="quizfinish"){ state.quiz = null; render(); }
+});
+document.addEventListener("change", async e=>{
+  if(e.target.id!=="photo") return;
+  const f = e.target.files && e.target.files[0]; e.target.value = "";
+  if(!f) return;
+  const k = state.photoKey, w = state.words[k];
+  if(!w) return;
+  delete state.picErr[k];
+  try{ w.photo = await shrinkPhoto(f); w.svg = ""; persist(w); }
+  catch(x){ state.picErr[k] = "Could not read that photo."; }
+  refreshCard(w);
+});
+
+document.addEventListener("change", e=>{
+  if(e.target.id==="lookupmodel"){ settings.lookupModel = e.target.value; saveSettings(); return; }
+  if(e.target.id==="drawmodel"){ settings.drawModel = e.target.value; saveSettings(); return; }
+  if(e.target.id!=="importfile") return;
+  const f = e.target.files && e.target.files[0]; e.target.value = "";
+  if(!f) return;
+  if(f.size>20*1024*1024){ state.backupMsg = "That file is too large to be a backup."; render(); return; }
+  const r = new FileReader();
+  r.onload = ()=>importJSON(String(r.result||""));
+  r.onerror = ()=>{ state.backupMsg = "Could not read that file."; render(); };
+  r.readAsText(f);
+});
+
+document.addEventListener("toggle", e=>{ if(e.target.id==="bulkdetails") state.bulkOpen = e.target.open; }, true);
+
+initStore();
+render();
+if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
