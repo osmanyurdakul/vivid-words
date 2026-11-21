@@ -1,5 +1,5 @@
 /* Offline cache for the app shell. Bump VERSION when you upload a new index.html. */
-const VERSION = "vw-v3";
+const VERSION = "vw-v5";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-180.png"];
 
 self.addEventListener("install", e => {

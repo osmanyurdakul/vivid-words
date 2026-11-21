@@ -113,7 +113,7 @@ input.small{font-size:15px;border-width:1.5px;border-color:var(--line)}
 .front p{color:var(--muted)}
 nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:2px solid var(--ink);padding:8px 12px calc(8px + env(safe-area-inset-bottom))}
 nav .in{max-width:520px;margin:0 auto;display:flex;gap:8px}
-.tab{flex:1;border:0;background:transparent;border-radius:12px;padding:10px 4px;font-weight:600;font-size:15px;color:var(--muted);position:relative}
+.tab{flex:1;border:0;background:transparent;border-radius:12px;padding:10px 2px;font-weight:600;font-size:14px;color:var(--muted);position:relative}
 .tab[aria-current="page"]{background:var(--ink);color:var(--bg)}
 .tab .n{position:absolute;top:2px;right:10px;background:var(--accent);color:var(--accent-ink);border-radius:99px;font-size:11px;padding:0 6px;line-height:18px}
 .back{border:0;background:transparent;color:var(--muted);font-weight:600;padding:4px 0 12px}
@@ -159,6 +159,14 @@ summary{cursor:pointer;font-weight:600;color:var(--muted)}
 .modes button{flex:1;border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px 6px;font-weight:600;font-size:15px;color:var(--ink)}
 .modes button[aria-pressed="true"]{border-color:var(--ink);background:var(--sun)}
 .front .label{margin-bottom:12px}
+.tense{margin-top:14px;background:var(--surface);border:2px solid var(--ink);border-radius:16px;padding:12px 14px}
+.tense .label{margin:0 0 8px}
+.tense .sm{font-weight:500;text-transform:none;letter-spacing:0}
+.conj{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}
+.conj.one{grid-template-columns:1fr}
+.conj li{font-size:16px;font-weight:600}
+.conj .pr{color:var(--muted);font-weight:500}
+.verbrow{padding:12px 14px}
 .recbar{display:flex;gap:10px;margin-top:16px;justify-content:center}
 .recbar .btn{flex:1}
 .btn.recording{background:var(--bad);color:#fff;border-color:var(--ink)}
@@ -185,6 +193,7 @@ summary{cursor:pointer;font-weight:600;color:var(--muted)}
   <button class="tab" data-act="tab" data-tab="words">Words</button>
   <button class="tab" data-act="tab" data-tab="cards">Cards<span class="n" id="due-n" hidden></span></button>
   <button class="tab" data-act="tab" data-tab="quiz">Quiz</button>
+  <button class="tab" data-act="tab" data-tab="verbs">Verbs</button>
 </div></nav>
 
 <script>
@@ -200,10 +209,11 @@ const esc = s => String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&
 const state = {
   lang: lsGet("vw-lang")==="en" ? "en" : "nl",
   tab: "add", words: {}, current: null, busy: false, error: "",
-  q: "", note: "", search: "", openKey: null,  more: {}, picErr: {}, photoKey: "", study: null, quiz: null, backupMsg: "", paste: "", cache: {}, storageWarn: false, bulk: null, bulkText: "", bulkOpen: false, settingsMsg: "", mineMsg: {}, mineBusy: {}, speakMode: lsGet("vw-speak")==="1", rec: null, hint: false, quizMode: (["choice","type","mixed"].indexOf(lsGet("vw-qmode"))>=0 ? lsGet("vw-qmode") : "mixed"), quizMsg: ""
+  q: "", note: "", search: "", openKey: null,  more: {}, picErr: {}, photoKey: "", study: null, quiz: null, backupMsg: "", paste: "", cache: {}, storageWarn: false, bulk: null, bulkText: "", bulkOpen: false, settingsMsg: "", conj: {}, conjBusy: {}, conjErr: {}, verb: null, verbFrom: "verbs", verbQ: "", verbFilter: "all", verbBusy: false, verbMsg: "", mineMsg: {}, mineBusy: {}, speakMode: lsGet("vw-speak")==="1", rec: null, hint: false, quizMode: (["choice","type","mixed"].indexOf(lsGet("vw-qmode"))>=0 ? lsGet("vw-qmode") : "mixed"), quizMsg: ""
 };
 
 /* ---------- settings and storage (this device only) ---------- */
+const APP_VERSION = "v5";
 const DEFAULTS = {key:"", lookupModel:"claude-haiku-5-5", drawModel:"claude-sonnet-5-5", rate:0.9};
 let settings = Object.assign({}, DEFAULTS);
 function loadSettings(){
@@ -263,7 +273,7 @@ function remove(key){
   IDB.tx(st=>st.delete(key));
 }
 async function initStore(){
-  loadSettings(); loadCache();
+  loadSettings(); loadCache(); loadConjCache();
   try{
     await IDB.open();
     const all = await IDB.all();
@@ -561,6 +571,7 @@ function card(w, opts){
       (w.tip?'<div class="tip"><b>Memory hook.</b> '+esc(w.tip)+'</div>':'')+
       (state.more[w.key]?'<div class="note">Adding pronunciation and more examples…</div>':'')+
       (w.note?'<div class="note">Seen in: '+esc(w.note)+'</div>':'')+
+      (saved&&isVerbWord(w)?'<button class="btn alt" data-act="conj" data-key="'+esc(w.key)+'" style="width:100%;margin-top:14px">Show tenses</button>':'')+
       (saved?mineBox(w):'')+
       tail+
     '</div></article>';
@@ -812,6 +823,7 @@ function flashBack(w){
     (w.translation?'<span class="gloss">'+esc(w.translation)+'</span>':'')+
     '<p class="meaning">'+esc(w.meaning)+'</p>'+
     (ex?'<ul class="ex">'+ex+'</ul>':'')+
+    (isVerbWord(w)?'<button class="btn alt" data-act="conj" data-key="'+k+'" style="width:100%;margin-top:14px">Show tenses</button>':'')+
     mineBox(w)+
     '<div class="pic">'+
       '<button class="btn ghost" data-act="draw" data-key="'+k+'"'+(w.drawing?' disabled':'')+'>'+(w.drawing?'Drawing…':(w.svg?'New drawing':'Draw a picture'))+'</button>'+
@@ -945,7 +957,7 @@ function render(){
   badge.textContent = n; badge.hidden = !n;
   const v = $("#view");
   const warn = state.storageWarn ? '<div class="msg err" role="alert" style="margin-bottom:16px">Your words could not be saved on this device (private browsing or full storage). Export a backup from the Words tab.</div>' : '';
-  v.innerHTML = warn + (state.tab==="add" ? addView() : state.tab==="words" ? wordsView() : state.tab==="cards" ? studyView() : state.tab==="quiz" ? quizView() : settingsView());
+  v.innerHTML = warn + (state.tab==="add" ? addView() : state.tab==="words" ? wordsView() : state.tab==="cards" ? studyView() : state.tab==="quiz" ? quizView() : state.tab==="verbs" ? verbsView() : settingsView());
   if(state.tab==="quiz" && state.quiz){ const t = $("#typed"); if(t){ try{ t.focus({preventScroll:true}); }catch(e){} } }
 }
 
@@ -1125,7 +1137,7 @@ function settingsView(){
     '<div class="row"><button class="btn alt" data-act="testvoice" data-lang="nl">Hear Dutch</button><button class="btn alt" data-act="testvoice" data-lang="en">Hear English</button></div></div>'+
     '<div class="field"><label>Keep my words safe</label><p class="hint">Words live in this browser only. Ask the browser not to clear them, and export a backup now and then.</p>'+
     '<button class="btn alt" data-act="persist">Protect and check storage</button></div>'+
-    (state.settingsMsg?'<div class="msg" role="status">'+esc(state.settingsMsg)+'</div>':'');
+    (state.settingsMsg?'<div class="msg" role="status">'+esc(state.settingsMsg)+'</div>':'')+'<p class="hint" style="margin-top:24px">App version '+APP_VERSION+'</p>';
 }
 async function testKey(){
   settings.key = ($("#apikey").value||"").trim(); saveSettings();
@@ -1146,6 +1158,664 @@ async function protectStorage(){
     }
   }catch(e){ msg = "Could not check storage here."; }
   state.settingsMsg = msg; render();
+}
+
+/* ---------- verbs: top 250 and conjugation ---------- */
+const VERB_DATA = {
+nl: `zijn|to be|was|is geweest
+hebben|to have|had|heeft gehad
+worden|to become|werd|is geworden
+kunnen|can, to be able to|kon|heeft gekund
+zullen|shall, will|zou|—
+moeten|must, to have to|moest|heeft gemoeten
+willen|to want|wilde|heeft gewild
+mogen|may, to be allowed to|mocht|heeft gemogen
+gaan|to go|ging|is gegaan
+komen|to come|kwam|is gekomen
+doen|to do|deed|heeft gedaan
+maken|to make|maakte|heeft gemaakt
+zien|to see|zag|heeft gezien
+weten|to know (a fact)|wist|heeft geweten
+zeggen|to say|zei|heeft gezegd
+denken|to think|dacht|heeft gedacht
+geven|to give|gaf|heeft gegeven
+nemen|to take|nam|heeft genomen
+staan|to stand|stond|heeft gestaan
+zitten|to sit|zat|heeft gezeten
+liggen|to lie (be lying)|lag|heeft gelegen
+laten|to let, to leave|liet|heeft gelaten
+blijven|to stay|bleef|is gebleven
+vinden|to find, to think|vond|heeft gevonden
+houden|to hold, to keep|hield|heeft gehouden
+houden van|to love, to like|hield van|heeft gehouden van
+krijgen|to get, to receive|kreeg|heeft gekregen
+brengen|to bring|bracht|heeft gebracht
+lijken|to seem|leek|heeft geleken
+heten|to be called|heette|heeft geheten
+kijken|to look, to watch|keek|heeft gekeken
+horen|to hear|hoorde|heeft gehoord
+luisteren|to listen|luisterde|heeft geluisterd
+praten|to talk|praatte|heeft gepraat
+spreken|to speak|sprak|heeft gesproken
+vragen|to ask|vroeg|heeft gevraagd
+antwoorden|to answer|antwoordde|heeft geantwoord
+vertellen|to tell|vertelde|heeft verteld
+uitleggen|to explain|legde uit|heeft uitgelegd
+noemen|to name, to call|noemde|heeft genoemd
+bedoelen|to mean|bedoelde|heeft bedoeld
+roepen|to call out, to shout|riep|heeft geroepen
+lachen|to laugh|lachte|heeft gelacht
+huilen|to cry|huilde|heeft gehuild
+glimlachen|to smile|glimlachte|heeft geglimlacht
+bellen|to call (phone)|belde|heeft gebeld
+appen|to text (app)|appte|heeft geappt
+schrijven|to write|schreef|heeft geschreven
+lezen|to read|las|heeft gelezen
+vertalen|to translate|vertaalde|heeft vertaald
+bespreken|to discuss|besprak|heeft besproken
+beloven|to promise|beloofde|heeft beloofd
+liegen|to lie (not tell the truth)|loog|heeft gelogen
+reageren|to react, to reply|reageerde|heeft gereageerd
+begrijpen|to understand|begreep|heeft begrepen
+snappen|to get it, to understand|snapte|heeft gesnapt
+hopen|to hope|hoopte|heeft gehoopt
+geloven|to believe|geloofde|heeft geloofd
+vergeten|to forget|vergat|heeft vergeten
+onthouden|to remember (memorise)|onthield|heeft onthouden
+zich herinneren|to remember (recall)|herinnerde zich|heeft zich herinnerd
+zich afvragen|to wonder|vroeg zich af|heeft zich afgevraagd
+kennen|to know (a person or place)|kende|heeft gekend
+leren|to learn, to teach|leerde|heeft geleerd
+studeren|to study|studeerde|heeft gestudeerd
+oefenen|to practise|oefende|heeft geoefend
+proberen|to try|probeerde|heeft geprobeerd
+besluiten|to decide|besloot|heeft besloten
+kiezen|to choose|koos|heeft gekozen
+twijfelen|to doubt|twijfelde|heeft getwijfeld
+verwachten|to expect|verwachtte|heeft verwacht
+merken|to notice|merkte|heeft gemerkt
+opmerken|to remark, to notice|merkte op|heeft opgemerkt
+ontdekken|to discover|ontdekte|heeft ontdekt
+herkennen|to recognise|herkende|heeft herkend
+vergelijken|to compare|vergeleek|heeft vergeleken
+nadenken|to think about|dacht na|heeft nagedacht
+voelen|to feel|voelde|heeft gevoeld
+zich voelen|to feel (oneself)|voelde zich|heeft zich gevoeld
+missen|to miss|miste|heeft gemist
+haten|to hate|haatte|heeft gehaat
+genieten|to enjoy|genoot|heeft genoten
+durven|to dare|durfde|heeft gedurfd
+zich realiseren|to realise|realiseerde zich|heeft zich gerealiseerd
+zich vergissen|to be mistaken|vergiste zich|heeft zich vergist
+eten|to eat|at|heeft gegeten
+drinken|to drink|dronk|heeft gedronken
+slapen|to sleep|sliep|heeft geslapen
+opstaan|to get up|stond op|is opgestaan
+wassen|to wash|waste|heeft gewassen
+afwassen|to wash the dishes|waste af|heeft afgewassen
+aantrekken|to put on (clothes)|trok aan|heeft aangetrokken
+koken|to cook, to boil|kookte|heeft gekookt
+bakken|to bake, to fry|bakte|heeft gebakken
+schoonmaken|to clean|maakte schoon|heeft schoongemaakt
+opruimen|to tidy up|ruimde op|heeft opgeruimd
+wonen|to live (reside)|woonde|heeft gewoond
+leven|to live (be alive)|leefde|heeft geleefd
+werken|to work|werkte|heeft gewerkt
+spelen|to play|speelde|heeft gespeeld
+sporten|to exercise|sportte|heeft gesport
+rennen|to run|rende|heeft/is gerend
+lopen|to walk|liep|heeft/is gelopen
+wandelen|to go for a walk|wandelde|heeft/is gewandeld
+fietsen|to cycle|fietste|heeft/is gefietst
+rijden|to ride, to drive|reed|heeft/is gereden
+vliegen|to fly|vloog|is gevlogen
+reizen|to travel|reisde|is gereisd
+zwemmen|to swim|zwom|heeft/is gezwommen
+dansen|to dance|danste|heeft gedanst
+zingen|to sing|zong|heeft gezongen
+zoeken|to look for, to search|zocht|heeft gezocht
+wachten|to wait|wachtte|heeft gewacht
+rusten|to rest|rustte|heeft gerust
+ontspannen|to relax|ontspande|heeft ontspannen
+kopen|to buy|kocht|heeft gekocht
+verkopen|to sell|verkocht|heeft verkocht
+betalen|to pay|betaalde|heeft betaald
+kosten|to cost|kostte|heeft gekost
+uitgeven|to spend, to publish|gaf uit|heeft uitgegeven
+sparen|to save (money)|spaarde|heeft gespaard
+verdienen|to earn, to deserve|verdiende|heeft verdiend
+huren|to rent|huurde|heeft gehuurd
+lenen|to borrow, to lend|leende|heeft geleend
+pakken|to grab, to take|pakte|heeft gepakt
+halen|to fetch, to get|haalde|heeft gehaald
+leggen|to lay, to put (flat)|legde|heeft gelegd
+zetten|to put (upright), to set|zette|heeft gezet
+gooien|to throw|gooide|heeft gegooid
+trekken|to pull|trok|heeft getrokken
+duwen|to push|duwde|heeft geduwd
+dragen|to carry, to wear|droeg|heeft gedragen
+breken|to break|brak|heeft/is gebroken
+repareren|to repair|repareerde|heeft gerepareerd
+bouwen|to build|bouwde|heeft gebouwd
+openen|to open|opende|heeft geopend
+sluiten|to close|sloot|heeft gesloten
+gebruiken|to use|gebruikte|heeft gebruikt
+ruilen|to swap, to exchange|ruilde|heeft geruild
+beginnen|to begin|begon|is begonnen
+starten|to start|startte|is/heeft gestart
+stoppen|to stop, to put in|stopte|heeft/is gestopt
+ophouden|to stop, to cease|hield op|heeft opgehouden
+eindigen|to end|eindigde|is/heeft geëindigd
+doorgaan|to continue|ging door|is doorgegaan
+veranderen|to change|veranderde|is/heeft veranderd
+groeien|to grow|groeide|is gegroeid
+gebeuren|to happen|gebeurde|is gebeurd
+blijken|to turn out, to prove|bleek|is gebleken
+ontstaan|to arise, to come into being|ontstond|is ontstaan
+verdwijnen|to disappear|verdween|is verdwenen
+verschijnen|to appear|verscheen|is verschenen
+winnen|to win|won|heeft gewonnen
+verliezen|to lose|verloor|heeft verloren
+slagen|to succeed, to pass|slaagde|is geslaagd
+mislukken|to fail|mislukte|is mislukt
+lukken|to succeed, to work out|lukte|is gelukt
+schijnen|to seem, to shine|scheen|heeft geschenen
+bestaan|to exist|bestond|heeft bestaan
+gelden|to apply, to be valid|gold|heeft gegolden
+helpen|to help|hielp|heeft geholpen
+ontmoeten|to meet|ontmoette|heeft ontmoet
+afspreken|to arrange, to agree|sprak af|heeft afgesproken
+uitnodigen|to invite|nodigde uit|heeft uitgenodigd
+bezoeken|to visit|bezocht|heeft bezocht
+vieren|to celebrate|vierde|heeft gevierd
+trouwen|to marry|trouwde|is/heeft getrouwd
+verhuizen|to move (house)|verhuisde|is verhuisd
+uitgaan|to go out|ging uit|is uitgegaan
+delen|to share, to divide|deelde|heeft gedeeld
+vertrouwen|to trust|vertrouwde|heeft vertrouwd
+kussen|to kiss|kuste|heeft gekust
+vergeven|to forgive|vergaf|heeft vergeven
+bedanken|to thank|bedankte|heeft bedankt
+feliciteren|to congratulate|feliciteerde|heeft gefeliciteerd
+toestaan|to allow|stond toe|heeft toegestaan
+verbieden|to forbid|verbood|heeft verboden
+weigeren|to refuse|weigerde|heeft geweigerd
+accepteren|to accept|accepteerde|heeft geaccepteerd
+stemmen|to vote, to tune|stemde|heeft gestemd
+terugkomen|to come back|kwam terug|is teruggekomen
+aankomen|to arrive|kwam aan|is aangekomen
+vertrekken|to leave, to depart|vertrok|is vertrokken
+binnenkomen|to come in|kwam binnen|is binnengekomen
+weggaan|to go away|ging weg|is weggegaan
+instappen|to get in (a vehicle)|stapte in|is ingestapt
+uitstappen|to get out (a vehicle)|stapte uit|is uitgestapt
+oversteken|to cross|stak over|is/heeft overgestoken
+parkeren|to park|parkeerde|heeft geparkeerd
+ophalen|to pick up|haalde op|heeft opgehaald
+meenemen|to take along|nam mee|heeft meegenomen
+meemaken|to experience|maakte mee|heeft meegemaakt
+uitzoeken|to sort out, to look up|zocht uit|heeft uitgezocht
+opschrijven|to write down|schreef op|heeft opgeschreven
+voorstellen|to introduce, to suggest|stelde voor|heeft voorgesteld
+ruiken|to smell|rook|heeft geroken
+proeven|to taste|proefde|heeft geproefd
+aanraken|to touch|raakte aan|heeft aangeraakt
+duren|to last, to take (time)|duurde|heeft geduurd
+tellen|to count|telde|heeft geteld
+rekenen|to calculate, to count on|rekende|heeft gerekend
+wegen|to weigh|woog|heeft gewogen
+sterven|to die|stierf|is gestorven
+genezen|to heal, to recover|genas|is genezen
+pijn doen|to hurt|deed pijn|heeft pijn gedaan
+beschrijven|to describe|beschreef|heeft beschreven
+laten zien|to show|liet zien|heeft laten zien
+nodig hebben|to need|had nodig|heeft nodig gehad
+bewaren|to keep, to store|bewaarde|heeft bewaard
+controleren|to check|controleerde|heeft gecontroleerd
+inschrijven|to register|schreef in|heeft ingeschreven
+vullen|to fill|vulde|heeft gevuld
+verstaan|to understand (hear)|verstond|heeft verstaan
+ontvangen|to receive|ontving|heeft ontvangen
+verwijderen|to remove, to delete|verwijderde|heeft verwijderd
+klaarmaken|to prepare|maakte klaar|heeft klaargemaakt
+bestellen|to order|bestelde|heeft besteld
+reserveren|to book|reserveerde|heeft gereserveerd
+annuleren|to cancel|annuleerde|heeft geannuleerd
+zich haasten|to hurry|haastte zich|heeft zich gehaast
+aanbieden|to offer|bood aan|heeft aangeboden
+overleggen|to consult, to confer|overlegde|heeft overlegd
+beslissen|to decide|besliste|heeft beslist
+verbeteren|to improve|verbeterde|heeft verbeterd
+herhalen|to repeat|herhaalde|heeft herhaald
+volgen|to follow|volgde|heeft gevolgd
+leiden|to lead|leidde|heeft geleid
+passen|to fit, to suit|paste|heeft gepast
+horen bij|to belong with|hoorde bij|heeft bij gehoord
+bevallen|to please (like)|beviel|is bevallen
+schelen|to matter, to be wrong|scheelde|heeft gescheeld
+vallen|to fall|viel|is gevallen
+dromen|to dream|droomde|heeft gedroomd
+plannen|to plan|plande|heeft gepland
+klagen|to complain|klaagde|heeft geklaagd
+zorgen|to care, to take care|zorgde|heeft gezorgd
+slaan|to hit|sloeg|heeft geslagen
+springen|to jump|sprong|is/heeft gesprongen
+hangen|to hang|hing|heeft gehangen
+snijden|to cut|sneed|heeft gesneden
+kloppen|to knock, to be correct|klopte|heeft geklopt
+bewegen|to move|bewoog|heeft bewogen
+bereiken|to reach|bereikte|heeft bereikt
+betekenen|to mean|betekende|heeft betekend
+wijzen|to point|wees|heeft gewezen
+verzamelen|to collect|verzamelde|heeft verzameld
+beantwoorden|to answer (a question)|beantwoordde|heeft beantwoord
+meedoen|to take part|deed mee|heeft meegedaan
+opletten|to pay attention|lette op|heeft opgelet
+vergaderen|to hold a meeting|vergaderde|heeft vergaderd`,
+en: `be|was/were|been
+have|had|had
+do|did|done
+say|said|said
+go|went|gone
+get|got|gotten
+make|made|made
+know|knew|known
+think|thought|thought
+take|took|taken
+see|saw|seen
+come|came|come
+want|wanted|wanted
+look|looked|looked
+use|used|used
+find|found|found
+give|gave|given
+tell|told|told
+work|worked|worked
+call|called|called
+try|tried|tried
+ask|asked|asked
+need|needed|needed
+feel|felt|felt
+become|became|become
+leave|left|left
+put|put|put
+mean|meant|meant
+keep|kept|kept
+let|let|let
+begin|began|begun
+seem|seemed|seemed
+help|helped|helped
+talk|talked|talked
+turn|turned|turned
+start|started|started
+show|showed|shown
+hear|heard|heard
+play|played|played
+run|ran|run
+move|moved|moved
+like|liked|liked
+live|lived|lived
+believe|believed|believed
+hold|held|held
+bring|brought|brought
+happen|happened|happened
+write|wrote|written
+provide|provided|provided
+sit|sat|sat
+stand|stood|stood
+lose|lost|lost
+pay|paid|paid
+meet|met|met
+include|included|included
+continue|continued|continued
+set|set|set
+learn|learned|learned
+change|changed|changed
+lead|led|led
+understand|understood|understood
+watch|watched|watched
+follow|followed|followed
+stop|stopped|stopped
+create|created|created
+speak|spoke|spoken
+read|read|read
+allow|allowed|allowed
+add|added|added
+spend|spent|spent
+grow|grew|grown
+open|opened|opened
+walk|walked|walked
+win|won|won
+offer|offered|offered
+remember|remembered|remembered
+love|loved|loved
+consider|considered|considered
+appear|appeared|appeared
+buy|bought|bought
+wait|waited|waited
+serve|served|served
+die|died|died
+send|sent|sent
+expect|expected|expected
+build|built|built
+stay|stayed|stayed
+fall|fell|fallen
+cut|cut|cut
+reach|reached|reached
+remain|remained|remained
+suggest|suggested|suggested
+raise|raised|raised
+pass|passed|passed
+sell|sold|sold
+require|required|required
+report|reported|reported
+decide|decided|decided
+pull|pulled|pulled
+choose|chose|chosen
+drive|drove|driven
+eat|ate|eaten
+drink|drank|drunk
+sleep|slept|slept
+wake|woke|woken
+wear|wore|worn
+forget|forgot|forgotten
+forgive|forgave|forgiven
+break|broke|broken
+catch|caught|caught
+teach|taught|taught
+throw|threw|thrown
+draw|drew|drawn
+hide|hid|hidden
+hang|hung|hung
+shake|shook|shaken
+sing|sang|sung
+swim|swam|swum
+ride|rode|ridden
+fly|flew|flown
+fight|fought|fought
+feed|fed|fed
+lend|lent|lent
+lay|laid|laid
+lie|lay|lain
+bite|bit|bitten
+beat|beat|beaten
+hit|hit|hit
+hurt|hurt|hurt
+burn|burned|burned
+shut|shut|shut
+spell|spelled|spelled
+spread|spread|spread
+steal|stole|stolen
+stick|stuck|stuck
+tear|tore|torn
+bet|bet|bet
+blow|blew|blown
+cost|cost|cost
+deal|dealt|dealt
+dream|dreamed|dreamed
+freeze|froze|frozen
+prove|proved|proven
+quit|quit|quit
+rise|rose|risen
+shoot|shot|shot
+split|split|split
+listen|listened|listened
+enjoy|enjoyed|enjoyed
+wonder|wondered|wondered
+worry|worried|worried
+care|cared|cared
+miss|missed|missed
+hate|hated|hated
+prefer|preferred|preferred
+agree|agreed|agreed
+argue|argued|argued
+apologize|apologized|apologized
+invite|invited|invited
+visit|visited|visited
+travel|traveled|traveled
+arrive|arrived|arrived
+return|returned|returned
+cook|cooked|cooked
+clean|cleaned|cleaned
+wash|washed|washed
+order|ordered|ordered
+book|booked|booked
+pick|picked|picked
+carry|carried|carried
+push|pushed|pushed
+share|shared|shared
+join|joined|joined
+promise|promised|promised
+plan|planned|planned
+prepare|prepared|prepared
+practice|practiced|practiced
+study|studied|studied
+test|tested|tested
+check|checked|checked
+fix|fixed|fixed
+cancel|canceled|canceled
+collect|collected|collected
+count|counted|counted
+cover|covered|covered
+enter|entered|entered
+explain|explained|explained
+fill|filled|filled
+finish|finished|finished
+fit|fit|fit
+guess|guessed|guessed
+handle|handled|handled
+hope|hoped|hoped
+imagine|imagined|imagined
+improve|improved|improved
+jump|jumped|jumped
+laugh|laughed|laughed
+manage|managed|managed
+matter|mattered|mattered
+mention|mentioned|mentioned
+notice|noticed|noticed
+own|owned|owned
+park|parked|parked
+protect|protected|protected
+realize|realized|realized
+receive|received|received
+refuse|refused|refused
+relax|relaxed|relaxed
+rent|rented|rented
+repeat|repeated|repeated
+replace|replaced|replaced
+reply|replied|replied
+rest|rested|rested
+save|saved|saved
+search|searched|searched
+smile|smiled|smiled
+sound|sounded|sounded
+suppose|supposed|supposed
+taste|tasted|tasted
+text|texted|texted
+touch|touched|touched
+trust|trusted|trusted
+borrow|borrowed|borrowed
+cry|cried|cried
+dance|danced|danced
+depend|depended|depended
+describe|described|described
+discover|discovered|discovered
+discuss|discussed|discussed
+drop|dropped|dropped
+earn|earned|earned
+exist|existed|existed
+fail|failed|failed
+hug|hugged|hugged
+ignore|ignored|ignored
+introduce|introduced|introduced
+kiss|kissed|kissed
+knock|knocked|knocked
+lock|locked|locked
+pack|packed|packed
+rely|relied|relied
+remind|reminded|reminded
+shout|shouted|shouted
+sign|signed|signed
+succeed|succeeded|succeeded
+support|supported|supported
+surprise|surprised|surprised
+thank|thanked|thanked
+treat|treated|treated
+wish|wished|wished`
+};
+const VERBS = {};
+function verbList(lang){
+  if(!VERBS[lang]){
+    VERBS[lang] = VERB_DATA[lang].trim().split("\n").map(l=>{
+      const p = l.split("|");
+      return lang==="nl" ? {inf:p[0], gloss:p[1], past:p[2], part:p[3]} : {inf:p[0], past:p[1], part:p[2]};
+    });
+  }
+  return VERBS[lang];
+}
+function verbKey(lang, inf){ return (lang+"_"+slug(inf)).slice(0,90); }
+function savedWordFor(lang, inf){
+  const k = verbKey(lang, inf);
+  return state.words[k] || (state.cache[k] && state.cache[k].w && state.words[state.cache[k].w.key]) || null;
+}
+function isVerbWord(w){
+  return (w.kind!=="phrase" && /verb/i.test(w.pos||"")) || verbList(w.lang).some(v=>v.inf===w.word);
+}
+function loadConjCache(){ try{ const o = JSON.parse(lsGet("vw-conj")||"{}"); if(o && typeof o==="object") state.conj = o; }catch(e){} }
+function saveConjCache(){
+  try{
+    const ks = Object.keys(state.conj);
+    if(ks.length>400) ks.slice(0, ks.length-400).forEach(k=>{ delete state.conj[k]; });
+    lsSet("vw-conj", JSON.stringify(state.conj));
+  }catch(e){}
+}
+const TENSES = {
+  nl:[["Present","onvoltooid tegenwoordige tijd"],["Simple past","onvoltooid verleden tijd"],["Present perfect","voltooid tegenwoordige tijd"],["Past perfect","voltooid verleden tijd"],["Future","with zullen"],["Conditional","with zou"],["Imperative","gebiedende wijs"]],
+  en:[["Present simple",""],["Present continuous",""],["Past simple",""],["Present perfect",""],["Past perfect",""],["Future","with will"]]
+};
+function conjPrompt(lang, inf){
+  if(lang==="nl") return 'Conjugate the Dutch verb "'+inf+'" for a learner, in standard Netherlands Dutch. Reply with ONLY one JSON object, no markdown, with these keys: '+
+    '"kind": a short English label such as regular, strong (irregular), modal, separable, reflexive; "aux": "hebben", "zijn" or "hebben/zijn" (the auxiliary of the perfect tense); '+
+    '"tip": one short plain English tip about how this verb conjugates (spelling rule, separable prefix, irregular forms); '+
+    '"tenses": an array of exactly 7 objects {"forms": [strings]} in this order: '+
+    '1 Present: 7 forms for ik, jij, u, hij/zij/het, wij, jullie, zij, each written with its pronoun, e.g. "ik loop"; '+
+    '2 Simple past: the same 7 pronouns; 3 Present perfect: the same 7 pronouns (hebben or zijn plus the past participle); 4 Past perfect: the same 7 pronouns; '+
+    '5 Future with zullen: the same 7 pronouns; 6 Conditional with zou/zouden: the same 7 pronouns; '+
+    '7 Imperative: exactly 3 forms: informal singular, formal, and the let us form (laten we ...). '+
+    'For separable verbs put the prefix in the right place (ik bel op, ik heb opgebeld). For reflexive verbs include the reflexive pronoun (ik herinner me).';
+  return 'Conjugate the English verb "'+inf+'" for a learner, in American English. Reply with ONLY one JSON object, no markdown, with these keys: '+
+    '"kind": regular or irregular, as a short English label; "tip": one short plain English tip about this verb (irregular forms, spelling changes); '+
+    '"tenses": an array of exactly 6 objects {"forms": [strings]} in this order, each with exactly 5 forms for I, you, he/she/it, we, they, each written with its pronoun, e.g. "I go", "he/she/it goes": '+
+    '1 Present simple; 2 Present continuous; 3 Past simple; 4 Present perfect (American usage, e.g. "I have gotten"); 5 Past perfect; 6 Future simple with will.';
+}
+async function loadConj(lang, inf){
+  const k = verbKey(lang, inf);
+  if(state.conj[k] || state.conjBusy[k]) return;
+  const sample = await getSample();
+  if(!sample){ state.conjErr[k] = NEEDS_KEY; verbRefresh(); return; }
+  state.conjBusy[k] = true; delete state.conjErr[k]; verbRefresh();
+  try{
+    const res = await sample(conjPrompt(lang, inf), {modelTier:"quick", maxTokens:1800});
+    const d = parseJSON(res.text);
+    const T = TENSES[lang];
+    const tenses = (Array.isArray(d.tenses) ? d.tenses : []).slice(0, T.length).map(t=>{
+      const f = Array.isArray(t) ? t : (t && Array.isArray(t.forms) ? t.forms : []);
+      return f.slice(0,8).map(x=>String(x).slice(0,80));
+    });
+    if(tenses.length<T.length || tenses.some(f=>!f.length)) throw new Error("incomplete");
+    state.conj[k] = {kind:String(d.kind||"").slice(0,60), aux:String(d.aux||"").slice(0,30), tip:String(d.tip||"").slice(0,300), tenses};
+    saveConjCache();
+  }catch(e){
+    state.conjErr[k] = apiErrMsg(e) || "Could not get the conjugation. Try again.";
+  }
+  state.conjBusy[k] = false; verbRefresh();
+}
+function verbRefresh(){ if(state.tab==="verbs") render(); }
+function openVerb(lang, inf, from){
+  state.verb = {lang, inf}; state.verbFrom = from || "verbs"; state.verbMsg = ""; state.tab = "verbs";
+  render(); window.scrollTo(0,0);
+  loadConj(lang, inf);
+}
+const PRON = /^(ik|jij|je|u|hij|zij|ze|het|wij|we|jullie|i|you|he|she|it|they|hij\/zij\/het|he\/she\/it)$/i;
+function conjLine(s){
+  const m = String(s).match(/^(\S+)\s+([\s\S]*)$/);
+  if(m && PRON.test(m[1])) return '<span class="pr">'+esc(m[1])+'</span> '+esc(m[2]);
+  return esc(s);
+}
+function conjHtml(lang, inf){
+  const k = verbKey(lang, inf), c = state.conj[k], T = TENSES[lang];
+  if(state.conjBusy[k]) return '<div class="skel">Conjugating…</div>';
+  if(!c) return (state.conjErr[k]?'<div class="msg err" role="alert" style="margin-top:14px">'+esc(state.conjErr[k])+'</div>':'')+
+    '<button class="btn" data-act="conjload" data-inf="'+esc(inf)+'" style="width:100%;margin-top:14px">Show all tenses</button>';
+  const chips = (c.kind?'<span class="chip">'+esc(c.kind)+'</span>':'')+(c.aux?'<span class="chip">perfect with '+esc(c.aux)+'</span>':'');
+  return (chips?'<div class="chips" style="margin-top:14px">'+chips+'</div>':'')+
+    (c.tip?'<div class="tip" style="margin-top:12px"><b>Tip.</b> '+esc(c.tip)+'</div>':'')+
+    c.tenses.map((f,i)=>'<div class="tense"><div class="label">'+esc(T[i][0])+(T[i][1]?' <span class="sm">· '+esc(T[i][1])+'</span>':'')+'</div>'+
+      '<ul class="conj'+(f.length<4?' one':'')+'">'+f.map(x=>'<li>'+conjLine(x)+'</li>').join("")+'</ul></div>').join("")+
+    '<button class="btn ghost" data-act="conjload" data-force="1" data-inf="'+esc(inf)+'" style="margin-top:14px">Regenerate</button>';
+}
+function verbDetail(){
+  const {lang, inf} = state.verb, L = verbList(lang).find(x=>x.inf===inf) || null, w = savedWordFor(lang, inf);
+  const parts = !L ? "" : (lang==="nl"
+    ? '<p class="meaning">'+esc(L.gloss)+'</p><p class="forms">'+esc(inf)+' · '+esc(L.past)+' · '+esc(L.part)+'</p>'
+    : '<p class="forms">'+esc(inf)+' · '+esc(L.past)+' · '+esc(L.part)+'</p>');
+  return '<button class="back" data-act="verbback">‹ Back</button>'+
+    '<article class="card"><div class="body"><div class="meta"><span class="chip">'+(lang==="nl"?"Dutch":"English")+'</span></div>'+
+    '<div class="wordrow"><h2 class="word'+(inf.length>14?' long':'')+'">'+esc(inf)+'</h2><button class="spk" data-act="sayverb" data-inf="'+esc(inf)+'" data-lang="'+lang+'" aria-label="Play pronunciation">'+ICON_SPK+'</button></div>'+
+    parts+
+    '<div class="actions" style="margin-top:14px">'+(w
+      ? '<button class="btn alt" data-act="openword" data-key="'+esc(w.key)+'">In my words: open the card</button>'
+      : '<button class="btn" data-act="verbadd" data-inf="'+esc(inf)+'"'+(state.verbBusy?' disabled':'')+'>'+(state.verbBusy?'Adding…':'Add to my words')+'</button>')+'</div>'+
+    (state.verbMsg?'<div class="note" role="status" style="margin-top:10px">'+esc(state.verbMsg)+'</div>':'')+
+    conjHtml(lang, inf)+
+    '</div></article>';
+}
+function verbsView(){
+  if(state.verb) return verbDetail();
+  const lang = state.lang, list = verbList(lang), q = state.verbQ.trim().toLowerCase(), f = state.verbFilter;
+  const saved = list.filter(v=>savedWordFor(lang, v.inf)).length;
+  const rows = list.filter(v=>{
+    if(q && !(v.inf.toLowerCase().includes(q) || (v.gloss||"").toLowerCase().includes(q))) return false;
+    if(f==="saved") return !!savedWordFor(lang, v.inf);
+    if(f==="new") return !savedWordFor(lang, v.inf);
+    return true;
+  });
+  const row = v=>{
+    const s = !!savedWordFor(lang, v.inf);
+    const g = lang==="nl" ? v.gloss+' · '+v.past+' · '+v.part : v.past+' · '+v.part;
+    return '<button class="item verbrow" data-act="verb" data-inf="'+esc(v.inf)+'"><span><div class="w">'+esc(v.inf)+'</div><div class="g">'+esc(g)+'</div></span>'+
+      (s?'<span class="due">saved</span>':'')+'</button>';
+  };
+  return '<h1>Top 250 verbs</h1><p class="sub">'+list.length+' everyday '+LANGS[lang].name+' verbs, a mix of the most useful ones. Tap one to see all its tenses. '+saved+' of '+list.length+' are in your words.</p>'+
+    '<input type="search" id="vsearch" placeholder="Search verbs" value="'+esc(state.verbQ)+'" aria-label="Search verbs">'+
+    modesBar("vfilter", f, [["all","All"],["new","Not saved"],["saved","Saved"]])+
+    '<div class="actions"><button class="btn alt" data-act="verbnext" style="width:100%"'+(state.verbBusy?' disabled':'')+'>'+(state.verbBusy?'Adding…':'Add the next 10 to my words')+'</button></div>'+
+    (state.verbMsg?'<div class="note" role="status" style="margin-top:10px">'+esc(state.verbMsg)+'</div>':'')+
+    (rows.length?'<div class="list">'+rows.map(row).join("")+'</div>':'<div class="empty">No verbs match.</div>');
+}
+async function addVerbs(infs){
+  if(state.verbBusy) return;
+  const sample = await getSample();
+  if(!sample){ state.verbMsg = NEEDS_KEY; render(); return; }
+  const lang = state.lang, b = {added:0, skipped:0, failed:[]};
+  if(!infs.length){ state.verbMsg = "Every verb in the list is already in your words."; render(); return; }
+  state.verbBusy = true; state.verbMsg = ""; render();
+  let i = 0, stopMsg = "";
+  const worker = async () => {
+    while(!stopMsg){
+      const n = i++; if(n>=infs.length) break;
+      try{ await bulkOne({text:infs[n], note:"Top 250 verbs"}, lang, sample, b); }
+      catch(e){
+        const fatal = e && (e.code==="bad_key" || e.code==="no_credit" || e.code==="network");
+        if(fatal){ stopMsg = apiErrMsg(e); break; }
+        b.failed.push(infs[n]);
+      }
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  state.verbBusy = false;
+  state.verbMsg = stopMsg || ("Added "+b.added+(b.skipped?", already saved "+b.skipped:"")+(b.failed.length?", failed "+b.failed.length+" ("+b.failed.slice(0,3).join(", ")+(b.failed.length>3?"…":"")+")":"")+".");
+  render();
 }
 
 function typedFinish(ok){
@@ -1172,6 +1842,12 @@ document.addEventListener("input", e=>{
   else if(e.target.id==="mine") liveMine(e.target);
   else if(e.target.id==="typed"){ if(state.quiz) state.quiz.typed = e.target.value; }
   else if(e.target.id==="rate"){ settings.rate = Number(e.target.value)||0.9; saveSettings(); }
+  else if(e.target.id==="vsearch"){
+    state.verbQ = e.target.value;
+    const pos = e.target.selectionStart;
+    render();
+    const s = $("#vsearch"); if(s){ s.focus(); try{ s.setSelectionRange(pos,pos); }catch(x){} }
+  }
   else if(e.target.id==="search"){
     state.search = e.target.value;
     const pos = e.target.selectionStart;
@@ -1182,8 +1858,8 @@ document.addEventListener("input", e=>{
 document.addEventListener("click", e=>{
   const b = e.target.closest("[data-act]"); if(!b) return;
   const a = b.dataset.act;
-  if(a==="lang"){ clearRec(); state.lang = b.dataset.lang; lsSet("vw-lang", state.lang); state.current=null; state.error=""; state.openKey=null; state.study=null; state.quiz=null; state.q=""; state.note=""; render(); }
-  else if(a==="tab"){ clearRec(); state.tab = b.dataset.tab; state.openKey = null; render(); window.scrollTo(0,0); }
+  if(a==="lang"){ clearRec(); state.lang = b.dataset.lang; lsSet("vw-lang", state.lang); state.current=null; state.error=""; state.openKey=null; state.verb=null; state.verbMsg=""; state.study=null; state.quiz=null; state.q=""; state.note=""; render(); }
+  else if(a==="tab"){ clearRec(); state.tab = b.dataset.tab; state.openKey = null; state.verb = null; state.verbMsg = ""; render(); window.scrollTo(0,0); }
   else if(a==="save"){ if(state.current){ persist(state.current); render(); } }
   else if(a==="open"){ state.openKey = b.dataset.key; render(); window.scrollTo(0,0); }
   else if(a==="close"){ state.openKey = null; render(); }
@@ -1224,6 +1900,20 @@ document.addEventListener("click", e=>{
   else if(a==="reveal"){ recStop(); state.study.revealed = true; render(); }
   else if(a==="smode"){ state.speakMode = b.dataset.v==="1"; lsSet("vw-speak", state.speakMode?"1":"0"); render(); }
   else if(a==="hint"){ state.hint = true; render(); }
+  else if(a==="verb"){ openVerb(state.lang, b.dataset.inf, "verbs"); }
+  else if(a==="conj"){ const w = state.words[b.dataset.key]; if(w) openVerb(w.lang, w.word, state.tab); }
+  else if(a==="conjload"){
+    if(!state.verb) return;
+    const k = verbKey(state.verb.lang, b.dataset.inf);
+    if(b.dataset.force==="1"){ delete state.conj[k]; saveConjCache(); }
+    loadConj(state.verb.lang, b.dataset.inf);
+  }
+  else if(a==="verbback"){ const to = state.verbFrom || "verbs"; state.verb = null; state.verbMsg = ""; state.tab = to; render(); window.scrollTo(0,0); }
+  else if(a==="verbadd"){ addVerbs([b.dataset.inf]); }
+  else if(a==="verbnext"){ const lang = state.lang; addVerbs(verbList(lang).filter(v=>!savedWordFor(lang, v.inf)).slice(0,10).map(v=>v.inf)); }
+  else if(a==="vfilter"){ state.verbFilter = b.dataset.v; render(); }
+  else if(a==="sayverb"){ speak(b.dataset.inf, b.dataset.lang); }
+  else if(a==="openword"){ state.tab = "words"; state.openKey = b.dataset.key; state.verb = null; render(); window.scrollTo(0,0); }
   else if(a==="rec"){ recStart(b.dataset.key); }
   else if(a==="recstop"){ recStop(); }
   else if(a==="recplay"){ recPlay(); }
@@ -1283,7 +1973,9 @@ document.addEventListener("toggle", e=>{ if(e.target.id==="bulkdetails") state.b
 
 initStore();
 render();
-if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register("sw.js").catch(()=>{});
+if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) { const had = !!navigator.serviceWorker.controller; let done = false;
+  navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(!had || done) return; done = true; location.reload(); });
+  navigator.serviceWorker.register("sw.js").catch(()=>{}); }
 </script>
 </body>
 </html>
