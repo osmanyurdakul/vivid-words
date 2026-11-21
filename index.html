@@ -167,6 +167,18 @@ summary{cursor:pointer;font-weight:600;color:var(--muted)}
 .conj li{font-size:16px;font-weight:600}
 .conj .pr{color:var(--muted);font-weight:500}
 .verbrow{padding:12px 14px}
+.queue{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.qrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:10px 12px;color:var(--ink);font:inherit}
+button.qrow{cursor:pointer}
+.qw{font-weight:700}
+.qt{color:var(--muted);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.qs{margin-left:auto;flex:none;font-size:12px;font-weight:600;border:2px solid var(--line);border-radius:999px;padding:2px 10px;color:var(--muted)}
+.q-ok .qs{border-color:var(--good);color:var(--good)}
+.q-fail .qs{border-color:var(--bad);color:var(--bad)}
+.q-busy .qs{border-color:var(--cobalt);color:var(--cobalt)}
+.qerr{color:var(--bad);font-size:14px;margin:4px 4px 0}
+.linkbtn{background:none;border:0;padding:0;font:inherit;font-weight:600;text-decoration:underline;color:var(--cobalt);cursor:pointer}
+.fmt{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:var(--surface);border:2px solid var(--line);border-radius:10px;padding:8px 10px;margin:8px 0;overflow-wrap:anywhere}
 .recbar{display:flex;gap:10px;margin-top:16px;justify-content:center}
 .recbar .btn{flex:1}
 .btn.recording{background:var(--bad);color:#fff;border-color:var(--ink)}
@@ -187,6 +199,7 @@ summary{cursor:pointer;font-weight:600;color:var(--muted)}
 </div>
 <input type="file" id="photo" accept="image/*" hidden>
 <input type="file" id="importfile" accept=".json,application/json,text/plain" hidden>
+<input type="file" id="bulkfile" accept=".csv,.tsv,.txt,text/plain,text/csv" hidden>
 <div id="toast" role="status"></div>
 <nav><div class="in" id="tabs">
   <button class="tab" data-act="tab" data-tab="add">Add</button>
@@ -209,11 +222,11 @@ const esc = s => String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&
 const state = {
   lang: lsGet("vw-lang")==="en" ? "en" : "nl",
   tab: "add", words: {}, current: null, busy: false, error: "",
-  q: "", note: "", search: "", openKey: null,  more: {}, picErr: {}, photoKey: "", study: null, quiz: null, backupMsg: "", paste: "", cache: {}, storageWarn: false, bulk: null, bulkText: "", bulkOpen: false, settingsMsg: "", conj: {}, conjBusy: {}, conjErr: {}, verb: null, verbFrom: "verbs", verbQ: "", verbFilter: "all", verbBusy: false, verbMsg: "", mineMsg: {}, mineBusy: {}, speakMode: lsGet("vw-speak")==="1", rec: null, hint: false, quizMode: (["choice","type","mixed"].indexOf(lsGet("vw-qmode"))>=0 ? lsGet("vw-qmode") : "mixed"), quizMsg: ""
+  q: "", note: "", search: "", openKey: null,  more: {}, picErr: {}, photoKey: "", study: null, quiz: null, backupMsg: "", paste: "", cache: {}, storageWarn: false, bulk: null, bulkText: "", bulkOpen: false, settingsMsg: "", conj: {}, conjBusy: {}, conjErr: {}, verb: null, verbFrom: "verbs", verbQ: "", verbFilter: "all", verbBusy: false, verbMsg: "", queue: [], qseq: 0, vsent: {}, vquiz: null, vquizLoading: false, vquizMsg: "", vqKind: "both", vqScope: "all", mineMsg: {}, mineBusy: {}, speakMode: lsGet("vw-speak")==="1", rec: null, hint: false, quizMode: (["choice","type","mixed","verbs"].indexOf(lsGet("vw-qmode"))>=0 ? lsGet("vw-qmode") : "mixed"), quizMsg: ""
 };
 
 /* ---------- settings and storage (this device only) ---------- */
-const APP_VERSION = "v5";
+const APP_VERSION = "v7";
 const DEFAULTS = {key:"", lookupModel:"claude-haiku-5-5", drawModel:"claude-sonnet-5-5", rate:0.9};
 let settings = Object.assign({}, DEFAULTS);
 function loadSettings(){
@@ -273,7 +286,7 @@ function remove(key){
   IDB.tx(st=>st.delete(key));
 }
 async function initStore(){
-  loadSettings(); loadCache(); loadConjCache();
+  loadSettings(); loadCache(); loadConjCache(); loadVsentCache(); loadQueue();
   try{
     await IDB.open();
     const all = await IDB.all();
@@ -581,10 +594,12 @@ function langKeys(){ return Object.keys(state.words).filter(k=>state.words[k].la
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 
 function addView(){
-  let out = '<h1>Catch a word or phrase</h1><p class="sub">Type a '+LANGS[state.lang].name+' word, or a whole sentence you do not understand. Save it and it joins your flashcards.</p>'+
-    '<form id="f"><input type="text" id="w" placeholder="'+(state.lang==="nl"?"e.g. gezellig, or a sentence":"e.g. ephemeral, or a sentence")+'" autocomplete="off" autocapitalize="off" spellcheck="false" value="'+esc(state.q)+'" aria-label="Word">'+
+  let out = '<h1>Catch a word or phrase</h1><p class="sub">Type a '+LANGS[state.lang].name+' word or phrase and press Add. It is looked up and saved in the background, so you can type the next one right away. Want to read it first? Use Look up.</p>'+
+    '<form id="f"><input type="text" id="w" placeholder="'+(state.lang==="nl"?"e.g. gezellig, or a sentence":"e.g. ephemeral, or a sentence")+'" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" value="'+esc(state.q)+'" aria-label="Word">'+
     '<input type="text" class="small" id="note" placeholder="Where did you see it? (book, page, optional)" autocomplete="off" value="'+esc(state.note)+'" aria-label="Where you saw it">'+
-    '<button class="btn" type="submit"'+(state.busy?' disabled':'')+'>'+(state.busy?"Looking it up…":"Look up")+'</button></form>';
+    '<button class="btn" type="submit">Add</button>'+
+    '<button class="btn alt" type="button" data-act="lookupnow"'+(state.busy?' disabled':'')+'>'+(state.busy?"Looking it up…":"Look up first")+'</button></form>'+
+    '<div id="queuebox">'+queueHtml()+'</div>';
   if(state.error) out += '<div class="msg err" role="alert">'+esc(state.error)+'</div>';
   if(state.busy && !state.current) out += '<div class="skel">Finding the meaning…</div>';
   if(state.current) out += '<div id="cardbox" data-key="'+esc(state.current.key)+'">'+card(state.current)+'</div>';
@@ -906,11 +921,12 @@ function buildQuiz(mode){
   return {qs, i:0, score:0, picked:null, result:null, typed:"", hint:false, missed:[]};
 }
 function quizView(){
+  if(state.quizMode==="verbs") return vquizView();
   const qz = state.quiz, all = langKeys();
   if(!qz){
-    if(all.length<4) return '<h1>Quiz</h1><div class="empty">Save at least 4 '+LANGS[state.lang].name+' words to unlock the quiz. You have '+all.length+'.</div>';
+    if(all.length<4) return '<h1>Quiz</h1>'+modesBar("qmode", state.quizMode, [["choice","Choose"],["type","Type it"],["mixed","Mixed"],["verbs","Verbs"]])+'<div class="empty">Save at least 4 '+LANGS[state.lang].name+' words to unlock the quiz. You have '+all.length+'.</div>';
     return '<h1>Quiz</h1><p class="sub">Up to 10 questions from your saved words. A word you get wrong becomes due in your flashcards again.</p>'+
-      modesBar("qmode", state.quizMode, [["choice","Choose"],["type","Type it"],["mixed","Mixed"]])+
+      modesBar("qmode", state.quizMode, [["choice","Choose"],["type","Type it"],["mixed","Mixed"],["verbs","Verbs"]])+
       '<p class="sub" style="margin-top:-6px">'+(state.quizMode==="choice"?"Pick the right answer from four options.":state.quizMode==="type"?"Type the missing word in a sentence. Uses your example sentences and your own sentences.":"A mix of both.")+'</p>'+
       (state.quizMsg?'<div class="msg" role="status" style="margin-bottom:14px">'+esc(state.quizMsg)+'</div>':'')+
       '<button class="btn" data-act="quizstart" style="width:100%">Start quiz</button>';
@@ -959,6 +975,7 @@ function render(){
   const warn = state.storageWarn ? '<div class="msg err" role="alert" style="margin-bottom:16px">Your words could not be saved on this device (private browsing or full storage). Export a backup from the Words tab.</div>' : '';
   v.innerHTML = warn + (state.tab==="add" ? addView() : state.tab==="words" ? wordsView() : state.tab==="cards" ? studyView() : state.tab==="quiz" ? quizView() : state.tab==="verbs" ? verbsView() : settingsView());
   if(state.tab==="quiz" && state.quiz){ const t = $("#typed"); if(t){ try{ t.focus({preventScroll:true}); }catch(e){} } }
+  if(state.tab==="quiz" && state.quizMode==="verbs" && state.vquiz){ const t = $("#vtyped"); if(t){ try{ t.focus({preventScroll:true}); }catch(e){} } }
 }
 
 
@@ -1030,20 +1047,159 @@ function buildWord(d, lang, typed, note, key){
     svg:"", photo:"", box:0, due:Date.now(), added:Date.now()
   };
 }
+/* ---------- quick add: background queue ---------- */
+function loadQueue(){
+  try{
+    const a = JSON.parse(lsGet("vw-queue")||"[]");
+    if(Array.isArray(a)) state.queue = a.slice(0,200).filter(x=>x && x.text).map(x=>({id:++state.qseq, text:String(x.text), note:String(x.note||""), mine:String(x.mine||""), lang:x.lang==="en"?"en":"nl", status:"wait", err:""}));
+  }catch(e){}
+}
+function saveQueue(){
+  try{ lsSet("vw-queue", JSON.stringify(state.queue.filter(x=>x.status==="wait"||x.status==="busy"||x.status==="fail").map(x=>({text:x.text, note:x.note, mine:x.mine, lang:x.lang})))); }catch(e){}
+}
+function queueAdd(items){
+  items.forEach(it=>state.queue.unshift({id:++state.qseq, text:it.text, note:it.note||"", mine:it.mine||"", lang:it.lang||state.lang, status:"wait", err:""}));
+  let finished = 0;
+  state.queue = state.queue.filter(x=>{ if(x.status==="ok"||x.status==="dup"){ finished++; return finished<=12; } return true; });
+  saveQueue(); queueRefresh(); pumpQueue();
+}
+let pumping = 0;
+async function pumpQueue(){
+  const sample = await getSample();
+  if(!sample){
+    state.queue.forEach(x=>{ if(x.status==="wait"){ x.status = "fail"; x.err = NEEDS_KEY; } });
+    saveQueue(); queueRefresh(); return;
+  }
+  while(pumping<3){
+    const it = state.queue.slice().reverse().find(x=>x.status==="wait");
+    if(!it) break;
+    it.status = "busy"; pumping++; queueRefresh();
+    (async()=>{
+      const b = {added:0, skipped:0, failed:[]};
+      try{
+        await bulkOne({text:it.text, note:it.note}, it.lang, sample, b);
+        applyMine(it, it.lang);
+        it.status = b.added ? "ok" : "dup";
+      }catch(e){
+        it.status = "fail";
+        it.err = apiErrMsg(e) || (e && e.message && e.message!=="No JSON" ? e.message : "no answer");
+        if(e && (e.code==="bad_key" || e.code==="no_credit" || e.code==="network")){
+          state.queue.forEach(x=>{ if(x.status==="wait"){ x.status = "fail"; x.err = it.err; } });
+        }
+      }
+      pumping--; saveQueue(); queueRefresh(); pumpQueue();
+    })();
+  }
+}
+function applyMine(it, lang){
+  const w = savedWordFor(lang, it.text);
+  if(w && it.mine && !w.mine){ w.mine = String(it.mine).slice(0,300); persist(w); }
+}
+function queueHtml(){
+  if(!state.queue.length) return "";
+  const names = {ok:"Saved", dup:"Already saved", busy:"Adding…", wait:"Waiting", fail:"Failed"};
+  return '<div class="label" style="margin-top:22px">Just added</div><ul class="queue" aria-live="polite">'+
+    state.queue.slice(0,14).map(x=>{
+      const w = (x.status==="ok"||x.status==="dup") ? savedWordFor(x.lang, x.text) : null;
+      const inner = '<span class="qw">'+esc(x.text)+'</span>'+(w&&w.translation?'<span class="qt">'+esc(w.translation)+'</span>':'')+'<span class="qs">'+names[x.status]+'</span>';
+      return '<li class="q-'+x.status+'">'+(w?'<button class="qrow" data-act="openword" data-key="'+esc(w.key)+'">'+inner+'</button>':'<div class="qrow">'+inner+'</div>')+
+        (x.status==="fail"?'<div class="qerr">'+esc(x.err)+' <button class="linkbtn" data-act="qretry" data-id="'+x.id+'">Retry</button></div>':'')+'</li>';
+    }).join("")+'</ul>'+
+    (state.queue.some(x=>x.status==="ok"||x.status==="dup")?'<button class="linkbtn" data-act="qclear" style="margin-top:8px">Clear finished</button>':'');
+}
+function queueRefresh(){ const box = $("#queuebox"); if(box) box.innerHTML = queueHtml(); }
+function quickAdd(){
+  const text = state.q.trim().slice(0,300);
+  if(!text) return;
+  const note = state.note.trim().slice(0,200);
+  const dirty = !!(state.current || state.error);
+  state.q = ""; state.current = null; state.error = "";
+  queueAdd([{text, note, lang:state.lang}]);
+  if(dirty) render();
+  const w = $("#w"); if(w){ w.value = ""; w.focus(); }
+}
+
+/* ---------- batch format, template, file load ---------- */
+const TEMPLATE_HEAD = ["word","where I saw it","my own sentence","language"];
+const TEMPLATE_ROWS = [["gezellig","Het leven van een loser, p. 12","Het is hier gezellig.","nl"],["to get the hang of it","The Martian, chapter 3","","en"]];
+function lineOf(cols){
+  const c = cols.map(x=>String(x||"").replace(/\s*\|\s*/g," / ").trim());
+  while(c.length>1 && !c[c.length-1]) c.pop();
+  return c.join(" | ");
+}
+function templateText(){ return [lineOf(TEMPLATE_HEAD)].concat(TEMPLATE_ROWS.map(lineOf)).join("\n"); }
+function templateCsv(){
+  const q = x=>/[;"\n]/.test(x) ? '"'+x.replace(/"/g,'""')+'"' : x;
+  const rows = [TEMPLATE_HEAD].concat(TEMPLATE_ROWS);
+  for(let i=0;i<40;i++) rows.push(["","","",""]);
+  return "﻿sep=;\r\n"+rows.map(r=>r.map(q).join(";")).join("\r\n")+"\r\n";
+}
+function copyText(text, msg){
+  let p; try{ p = navigator.clipboard.writeText(text); }catch(x){ p = Promise.reject(x); }
+  p.then(()=>toast(msg)).catch(()=>toast("Copy was blocked here. Use Download instead."));
+}
+function downloadText(name, text, type){
+  try{
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], {type}));
+    a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+    toast("Template saved as "+name+".");
+  }catch(e){ toast("Could not save a file here. Use Copy template instead."); }
+}
+function parseDelimited(text, delim){
+  const rows = []; let row = [], cell = "", q = false;
+  for(let i=0;i<text.length;i++){
+    const ch = text[i];
+    if(q){ if(ch==='"'){ if(text[i+1]==='"'){ cell += '"'; i++; } else q = false; } else cell += ch; }
+    else if(ch==='"' && !cell) q = true;
+    else if(ch===delim){ row.push(cell); cell = ""; }
+    else if(ch==="\n"){ row.push(cell); rows.push(row); row = []; cell = ""; }
+    else if(ch==="\r"){ }
+    else cell += ch;
+  }
+  if(cell || row.length){ row.push(cell); rows.push(row); }
+  return rows;
+}
+function fileToLines(text, name){
+  text = String(text).replace(/^﻿/, "");
+  const sep = /^sep=(.)\s*$/im.exec(text);
+  const body = text.split(/\r?\n/).filter(l=>!/^sep=.$/i.test(l.trim())).join("\n");
+  const first = body.split("\n").find(l=>l.trim()) || "";
+  let delim = sep ? sep[1] : "";
+  if(!delim){
+    const cands = /\.csv$/i.test(name) ? ["\t",";","|",","] : ["\t",";","|"];
+    let n = 0; cands.forEach(c=>{ const k = first.split(c).length-1; if(k>n){ n = k; delim = c; } });
+  }
+  if(!delim) return body.split("\n").map(l=>l.trim()).filter(Boolean);
+  return parseDelimited(body, delim).map(r=>lineOf(r.slice(0,4))).filter(l=>l && l.replace(/[|\s]/g,""));
+}
+function normLang(x){
+  x = String(x||"").trim().toLowerCase();
+  return (x==="nl"||x==="dutch"||x==="nederlands") ? "nl" : (x==="en"||x==="english") ? "en" : "";
+}
+function splitCols(l){
+  if(l.indexOf("\t")>=0) return l.split("\t");
+  if(l.indexOf("|")>=0) return l.split("|");
+  if(l.indexOf(";")>=0) return l.split(";");
+  return [l];
+}
 function parseBulk(text){
-  const seen = {}, items = [];
+  const seen = {}, items = []; let first = true;
   String(text).split(/\r?\n/).forEach(line=>{
-    let l = line.trim().replace(/^(?:[-*•]\s+|\d+[.)]\s+)/,"");
-    if(!l) return;
-    const parts = l.split("|");
-    const t = parts[0].trim().slice(0,300), note = (parts[1]||"").trim().slice(0,200);
+    const l = line.trim().replace(/^(?:[-*•]\s+|\d+[.)]\s+)/, "");
+    if(!l || /^sep=.$/i.test(l)) return;
+    const c = splitCols(l).map(x=>x.trim());
+    if(first){ first = false; if(/^(word|woord|word or phrase)$/i.test(c[0])) return; }
+    const t = c[0].slice(0,300);
     if(!t) return;
-    const k = slug(t);
+    const lang = normLang(c[3]), k = (lang||"_")+"_"+slug(t);
     if(seen[k]) return;
-    seen[k] = true; items.push({text:t, note});
+    seen[k] = true; items.push({text:t, note:(c[1]||"").slice(0,200), mine:(c[2]||"").slice(0,300), lang});
   });
   return items;
 }
+
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 async function bulkOne(it, lang, sample, b){
   const typedKey = (lang+"_"+slug(it.text)).slice(0,90);
@@ -1082,7 +1238,7 @@ async function runBulk(){
     while(!b.stop){
       const i = next++;
       if(i>=items.length) break;
-      try{ await bulkOne(items[i], lang, sample, b); processed[i] = true; }
+      try{ const L = items[i].lang || lang; await bulkOne(items[i], L, sample, b); applyMine(items[i], L); processed[i] = true; }
       catch(e){
         const fatal = e && (e.code==="bad_key" || e.code==="no_credit" || e.code==="network");
         if(fatal){ b.stop = true; b.msg = apiErrMsg(e); }
@@ -1095,7 +1251,7 @@ async function runBulk(){
   await Promise.all([worker(), worker(), worker()]);
   b.running = false;
   const left = items.filter((it,i)=>!processed[i] || b.failed.some(f=>f.i===i));
-  state.bulkText = left.map(it=>it.text+(it.note?" | "+it.note:"")).join("\n");
+  state.bulkText = left.map(it=>lineOf([it.text, it.note, it.mine, it.lang])).join("\n");
   if(b.stop && !b.msg) b.msg = "Stopped.";
   render();
 }
@@ -1115,8 +1271,12 @@ function bulkRefresh(){ const box = $("#bulkbox"); if(box) box.innerHTML = bulkH
 function bulkSection(){
   const running = !!(state.bulk && state.bulk.running);
   return '<details class="bulk" id="bulkdetails"'+(state.bulkOpen||state.bulk?' open':'')+'><summary>Add many words at once</summary>'+
-    '<p class="sub" style="margin-top:10px">One word or phrase per line, in '+LANGS[state.lang].name+'. Put where you saw it after a | if you like. They are looked up and saved automatically.</p>'+
-    '<textarea id="bulktext" rows="7" placeholder="'+(state.lang==="nl"?"gezellig&#10;de fiets&#10;het is mij een raadsel | The Martian":"ephemeral&#10;to get the hang of it | chapter 3")+'" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Words to add">'+esc(state.bulkText)+'</textarea>'+
+    '<p class="sub" style="margin-top:10px">One per line. Only the word is required. The rest is optional:</p>'+
+    '<div class="fmt">word | where I saw it | my own sentence | nl or en</div>'+
+    '<p class="hint" style="margin-bottom:10px">Leave out the language to use the one selected above. You can paste straight from Excel or Google Sheets, or load a CSV or text file.</p>'+
+    '<div class="row" style="margin-bottom:10px"><button class="btn alt" data-act="tmplcopy">Copy template</button><button class="btn alt" data-act="tmpldl">Download template</button></div>'+
+    '<div class="row" style="margin-bottom:12px"><button class="btn alt" data-act="bulkfilepick">Load a file</button></div>'+
+    '<textarea id="bulktext" rows="7" placeholder="'+(state.lang==="nl"?"gezellig&#10;de fiets | Het leven van een loser&#10;het is mij een raadsel | The Martian | Het is mij een raadsel waarom.":"ephemeral&#10;to get the hang of it | chapter 3&#10;reluctant | | I was reluctant to go.")+'" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Words to add">'+esc(state.bulkText)+'</textarea>'+
     '<button class="btn" data-act="bulkstart"'+(running?' disabled':'')+' style="width:100%">'+(running?"Adding…":"Add all")+'</button>'+
     '<div id="bulkbox">'+bulkHtml()+'</div></details>';
 }
@@ -1818,6 +1978,148 @@ async function addVerbs(infs){
   render();
 }
 
+/* ---------- verb quiz ---------- */
+function loadVsentCache(){ try{ const o = JSON.parse(lsGet("vw-vsent")||"{}"); if(o && typeof o==="object") state.vsent = o; }catch(e){} }
+function saveVsentCache(){
+  try{
+    const ks = Object.keys(state.vsent);
+    if(ks.length>400) ks.slice(0, ks.length-400).forEach(k=>{ delete state.vsent[k]; });
+    lsSet("vw-vsent", JSON.stringify(state.vsent));
+  }catch(e){}
+}
+function isIrregularVerb(lang, v){
+  const p = String(v.past).split("/")[0].split(" ")[0];
+  return lang==="nl" ? !/(de|te)$/.test(p) : !/ed$/.test(p);
+}
+function stripAux(part){ return String(part).replace(/^(heeft|is)(\/(heeft|is))?\s+/, ""); }
+function hasPart(v){ return !!v.part && v.part!=="—"; }
+function sentEligible(lang, v){ return lang==="en" || (!/\s/.test(v.inf) && !/\s/.test(v.past)); }
+async function ensureSentences(lang, infs){
+  const sample = await getSample();
+  if(!sample) return;
+  const L = lang==="nl" ? "Dutch (as spoken in the Netherlands)" : "American English";
+  const prompt = 'Make fill-in-the-blank practice sentences for a learner of '+L+'. For each verb below write 2 short, natural, everyday sentences (5 to 10 words), each using a different tense from this list: '+
+    (lang==="nl" ? '"Present", "Simple past", "Past participle"' : '"Present", "Simple past", "Past participle"')+'. '+
+    'Each sentence has exactly one blank written as ___ and the blank replaces exactly ONE word: the present form, the simple past form, or the past participle. For the past participle, write the auxiliary before the blank (for example "Ik heb gisteren een uur ___." or "I have already ___ it."). '+
+    'Make the answer unambiguous: use a singular subject or a clear time word. '+
+    'Reply with ONLY one JSON object, no markdown: {"items":[{"verb":"the infinitive exactly as given","s":[{"t":"the sentence with ___","a":"the one word that fills the blank","tense":"Present, Simple past or Past participle"}]}]}. '+
+    'Verbs: '+infs.join(", ");
+  try{
+    const res = await sample(prompt, {modelTier:"quick", maxTokens:2500});
+    const d = parseJSON(res.text);
+    (Array.isArray(d.items)?d.items:[]).forEach(it=>{
+      const inf = infs.find(x=>x.toLowerCase()===String(it.verb||"").toLowerCase());
+      if(!inf) return;
+      const s = (Array.isArray(it.s)?it.s:[]).filter(x=>x && typeof x.t==="string" && typeof x.a==="string" && (x.t.match(/___/g)||[]).length===1 && x.a.trim() && x.a.length<=40)
+        .slice(0,3).map(x=>({t:x.t.slice(0,160), a:x.a.trim(), tense:String(x.tense||"").slice(0,30)}));
+      if(s.length) state.vsent[verbKey(lang,inf)] = s;
+    });
+    saveVsentCache();
+  }catch(e){ state.vquizMsg = apiErrMsg(e) || "Could not prepare new sentences, so some questions use forms instead."; }
+}
+async function startVerbQuiz(){
+  const lang = state.lang, kind = state.vqKind, scope = state.vqScope, key = !!settings.key;
+  state.vquizMsg = "";
+  let pool = verbList(lang).filter(v=> scope==="irregular" ? isIrregularVerb(lang,v) : scope==="saved" ? !!savedWordFor(lang,v.inf) : true);
+  if(!pool.length){ state.vquizMsg = scope==="saved" ? "No saved verbs yet. Add some from the Verbs list first, or choose All." : "No verbs match."; render(); return; }
+  shuffle(pool);
+  const cached = v => !!state.vsent[verbKey(lang,v.inf)];
+  let picks;
+  if(kind==="sentences"){
+    const el = pool.filter(v=>sentEligible(lang,v));
+    picks = (key ? el : el.filter(cached)).slice(0,10);
+    if(!picks.length){ state.vquizMsg = "Sentence questions need your API key the first time. Add it in Settings, or choose Forms."; render(); return; }
+  }else picks = pool.slice(0,10);
+  if(kind!=="forms" && key){
+    const missing = picks.filter(v=>sentEligible(lang,v) && !cached(v));
+    if(missing.length){ state.vquizLoading = true; render(); await ensureSentences(lang, missing.map(v=>v.inf)); state.vquizLoading = false; }
+  }
+  const qs = picks.map(v=>{
+    const sents = state.vsent[verbKey(lang,v.inf)] || [];
+    let types = [];
+    if(kind!=="sentences"){ types.push("past"); if(hasPart(v)){ types.push("part"); if(lang==="nl") types.push("aux"); } }
+    if(kind!=="forms" && sents.length){ if(kind==="sentences") types = ["sent"]; else types.push("sent","sent"); }
+    if(!types.length) types = ["past"];
+    const type = types[Math.floor(Math.random()*types.length)];
+    const base = {lang, inf:v.inf, gloss:v.gloss||"", hint: lang==="nl" ? (v.gloss||v.inf) : "to "+v.inf, type, parts:lang==="nl" ? v.inf+" · "+v.past+" · "+v.part : v.inf+" · "+v.past+" · "+v.part};
+    if(type==="past"){
+      const pron = lang==="nl" ? (Math.random()<0.5?"ik":"hij") : (Math.random()<0.5?"I":"he");
+      return Object.assign(base, {pron, answers:String(v.past).split("/"), show:v.past});
+    }
+    if(type==="part"){ const a = stripAux(v.part); return Object.assign(base, {answers:a.split("/"), show:a}); }
+    if(type==="aux"){
+      const a = /^heeft\/is/.test(v.part) ? ["heeft","is"] : /^is\s/.test(v.part) ? ["is"] : ["heeft"];
+      return Object.assign(base, {answers:a, show:a.join(" or ")});
+    }
+    const s = sents[Math.floor(Math.random()*sents.length)];
+    return Object.assign(base, {t:s.t, tense:s.tense, answers:[s.a], show:s.a});
+  });
+  state.vquiz = {qs, i:0, score:0, result:null, typed:"", given:"", hint:false, missed:[]};
+  render(); window.scrollTo(0,0);
+}
+function vfinish(ok, given){
+  const vq = state.vquiz, q = vq.qs[vq.i];
+  vq.result = ok ? "ok" : "no"; vq.given = given!=null ? given : vq.typed;
+  if(ok) vq.score++;
+  else{
+    vq.missed.push(q);
+    const w = savedWordFor(q.lang, q.inf);
+    if(w){ w.box = 0; w.due = Date.now(); persist(w); }
+  }
+  render();
+}
+function vcheckTyped(){
+  const vq = state.vquiz; if(!vq || vq.result!==null) return;
+  const q = vq.qs[vq.i]; if(!vq.typed.trim()) return;
+  vfinish(q.answers.some(a=>norm(a)===norm(vq.typed)));
+}
+function vquizStart(){
+  return '<h1>Quiz</h1><p class="sub">Verb practice: up to 10 questions on forms and sentences. A saved verb you miss becomes due in your flashcards again.</p>'+
+    modesBar("qmode", state.quizMode, [["choice","Choose"],["type","Type it"],["mixed","Mixed"],["verbs","Verbs"]])+
+    '<div class="label">Questions</div>'+modesBar("vqkind", state.vqKind, [["both","Both"],["forms","Forms"],["sentences","Sentences"]])+
+    '<div class="label">Which verbs</div>'+modesBar("vqscope", state.vqScope, [["all","All 250"],["irregular","Irregular"],["saved","Saved"]])+
+    '<p class="sub" style="margin-top:-6px">'+(state.vqKind==="forms"?"Past forms, participles and hebben or zijn. Works offline.":state.vqKind==="sentences"?"Fill the blank in a sentence. New sentences need your API key once, then they are kept on this device.":"A mix of both.")+'</p>'+
+    (state.vquizMsg?'<div class="msg" role="status" style="margin-bottom:14px">'+esc(state.vquizMsg)+'</div>':'')+
+    '<button class="btn" data-act="vqstart" style="width:100%">Start verb quiz</button>';
+}
+function vquizView(){
+  const vq = state.vquiz;
+  if(state.vquizLoading) return '<h1>Quiz</h1><div class="skel">Preparing sentences…</div>';
+  if(!vq) return vquizStart();
+  if(vq.i>=vq.qs.length){
+    const miss = vq.missed.map(q=>'<li>'+esc(q.parts)+(q.gloss?' <span class="g">'+esc(q.gloss)+'</span>':'')+'</li>').join("");
+    return '<h1>'+vq.score+' / '+vq.qs.length+'</h1><p class="sub">'+(vq.missed.length?'Verbs to look at again:':'Everything right. Nice.')+'</p>'+
+      (miss?'<ul class="missed">'+miss+'</ul>':'')+
+      '<div class="stack"><button class="btn" data-act="vqstart">Play again</button><button class="btn alt" data-act="vqfinish">Done</button></div>';
+  }
+  const q = vq.qs[vq.i], done = vq.result!==null, pct = Math.round(vq.i/vq.qs.length*100);
+  let prompt;
+  if(q.type==="past") prompt = 'Simple past of <span class="qword">'+esc(q.inf)+'</span>'+(q.gloss?'<p class="qclue">'+esc(q.gloss)+'</p>':'')+'<div class="cloze">'+esc(q.pron)+' _____</div>';
+  else if(q.type==="part") prompt = 'Past participle of <span class="qword">'+esc(q.inf)+'</span>'+(q.gloss?'<p class="qclue">'+esc(q.gloss)+'</p>':'');
+  else if(q.type==="aux") prompt = 'Perfect tense of <span class="qword">'+esc(q.inf)+'</span>: <span class="qword">heeft</span> or <span class="qword">is</span>?'+(q.gloss?'<p class="qclue">'+esc(q.gloss)+'</p>':'');
+  else prompt = 'Fill in the blank.<div class="cloze">'+esc(q.t)+'</div><p class="qclue">'+esc(q.hint)+(q.tense?' · '+esc(q.tense):'')+'</p>';
+  if(vq.hint && q.type!=="aux") prompt += '<p class="qclue">Starts with “'+esc(q.answers[0].charAt(0))+'”.</p>';
+  let out = '<div class="progress" role="progressbar" aria-valuenow="'+pct+'" aria-valuemin="0" aria-valuemax="100"><i style="width:'+pct+'%"></i></div>'+
+    '<div class="qcard"><div class="qtext">'+prompt+'</div>';
+  if(q.type==="aux"){
+    out += '<div class="opts">'+["heeft","is"].map(o=>{
+      let c = "opt"; if(done){ if(q.answers.indexOf(o)>=0) c += " ok"; else if(vq.given===o) c += " no"; }
+      return '<button class="'+c+'" data-act="vpick" data-v="'+o+'"'+(done?' disabled':'')+'>'+o+'</button>';
+    }).join("")+'</div>';
+  }
+  out += '</div>';
+  if(q.type!=="aux" && !done){
+    out += '<form id="vf" style="display:flex;flex-direction:column;gap:12px;margin-top:16px"><input type="text" id="vtyped" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type your answer" value="'+esc(vq.typed)+'" aria-label="Your answer"><button class="btn" type="submit">Check</button>'+
+      '<div class="row"><button type="button" class="btn ghost" data-act="vhint">Hint</button><button type="button" class="btn ghost" data-act="vgiveup">I do not know</button></div></form>';
+  }
+  if(done){
+    const right = vq.result==="ok";
+    out += '<div class="msg" style="margin-top:14px"><b>'+(right?'Correct.':'Not quite.')+'</b> '+(right?'':'Answer: '+esc(q.show)+'. ')+'<div class="note" style="margin-top:6px">'+esc(q.parts)+'</div>'+
+      (!right && vq.given && q.type!=="aux" ? '<div class="note" style="margin-top:4px">You typed: '+esc(vq.given)+'</div>':'')+'</div>'+
+      '<div class="actions" style="margin-top:14px"><button class="btn" data-act="vqnext">'+(vq.i+1>=vq.qs.length?'See score':'Next')+'</button></div>';
+  }
+  return out;
+}
 function typedFinish(ok){
   const qz = state.quiz, q = qz.qs[qz.i], w = state.words[q.k];
   qz.result = ok ? "ok" : "no";
@@ -1833,7 +2135,7 @@ function checkTyped(){
 }
 
 /* ---------- events ---------- */
-document.addEventListener("submit", e=>{ if(e.target.id==="f"){ e.preventDefault(); lookup(); } else if(e.target.id==="tf"){ e.preventDefault(); checkTyped(); } });
+document.addEventListener("submit", e=>{ if(e.target.id==="f"){ e.preventDefault(); quickAdd(); } else if(e.target.id==="tf"){ e.preventDefault(); checkTyped(); } else if(e.target.id==="vf"){ e.preventDefault(); vcheckTyped(); } });
 document.addEventListener("input", e=>{
   if(e.target.id==="w") state.q = e.target.value;
   else if(e.target.id==="note") state.note = e.target.value;
@@ -1841,6 +2143,7 @@ document.addEventListener("input", e=>{
   else if(e.target.id==="bulktext") state.bulkText = e.target.value;
   else if(e.target.id==="mine") liveMine(e.target);
   else if(e.target.id==="typed"){ if(state.quiz) state.quiz.typed = e.target.value; }
+  else if(e.target.id==="vtyped"){ if(state.vquiz) state.vquiz.typed = e.target.value; }
   else if(e.target.id==="rate"){ settings.rate = Number(e.target.value)||0.9; saveSettings(); }
   else if(e.target.id==="vsearch"){
     state.verbQ = e.target.value;
@@ -1881,6 +2184,12 @@ document.addEventListener("click", e=>{
     if(w){ if(b.dataset.i!=null && w.examples && w.examples[b.dataset.i]) speak(w.examples[b.dataset.i].t, w.lang); else sayWord(w); }
   }
   else if(a==="bulkstart"){ runBulk(); }
+  else if(a==="lookupnow"){ lookup(); }
+  else if(a==="qretry"){ const it = state.queue.find(x=>String(x.id)===b.dataset.id); if(it){ it.status = "wait"; it.err = ""; saveQueue(); queueRefresh(); pumpQueue(); } }
+  else if(a==="qclear"){ state.queue = state.queue.filter(x=>x.status!=="ok" && x.status!=="dup"); saveQueue(); queueRefresh(); }
+  else if(a==="tmplcopy"){ copyText(templateText(), "Template copied. Paste it into Notes, Excel or Sheets and fill it in."); }
+  else if(a==="tmpldl"){ downloadText("vivid-words-template.csv", templateCsv(), "text/csv;charset=utf-8"); }
+  else if(a==="bulkfilepick"){ const f = $("#bulkfile"); if(f) f.click(); }
   else if(a==="bulkstop"){ if(state.bulk) state.bulk.stop = true; }
   else if(a==="export"){ exportFile(); }
   else if(a==="copy"){
@@ -1900,6 +2209,14 @@ document.addEventListener("click", e=>{
   else if(a==="reveal"){ recStop(); state.study.revealed = true; render(); }
   else if(a==="smode"){ state.speakMode = b.dataset.v==="1"; lsSet("vw-speak", state.speakMode?"1":"0"); render(); }
   else if(a==="hint"){ state.hint = true; render(); }
+  else if(a==="vqkind"){ state.vqKind = b.dataset.v; state.vquizMsg = ""; render(); }
+  else if(a==="vqscope"){ state.vqScope = b.dataset.v; state.vquizMsg = ""; render(); }
+  else if(a==="vqstart"){ startVerbQuiz(); }
+  else if(a==="vqfinish"){ state.vquiz = null; render(); }
+  else if(a==="vqnext"){ const vq = state.vquiz; vq.i++; vq.result = null; vq.typed = ""; vq.given = ""; vq.hint = false; render(); window.scrollTo(0,0); }
+  else if(a==="vpick"){ const vq = state.vquiz; if(vq && vq.result===null){ const q = vq.qs[vq.i]; vq.given = b.dataset.v; vfinish(q.answers.indexOf(b.dataset.v)>=0, b.dataset.v); } }
+  else if(a==="vhint"){ if(state.vquiz){ state.vquiz.hint = true; render(); } }
+  else if(a==="vgiveup"){ if(state.vquiz && state.vquiz.result===null) vfinish(false); }
   else if(a==="verb"){ openVerb(state.lang, b.dataset.inf, "verbs"); }
   else if(a==="conj"){ const w = state.words[b.dataset.key]; if(w) openVerb(w.lang, w.word, state.tab); }
   else if(a==="conjload"){
@@ -1969,9 +2286,25 @@ document.addEventListener("change", e=>{
   r.readAsText(f);
 });
 
+document.addEventListener("change", async e=>{
+  if(e.target.id!=="bulkfile") return;
+  const f = e.target.files && e.target.files[0]; e.target.value = "";
+  if(!f) return;
+  if(f.size>2*1024*1024){ toast("That file is too large for a word list."); return; }
+  try{
+    const lines = fileToLines(await f.text(), f.name);
+    const n = parseBulk(lines.join("\n")).length;
+    state.bulkOpen = true;
+    if(!n){ state.bulk = {running:false, total:0, done:0, added:0, skipped:0, failed:[], msg:"No words found in that file."}; render(); return; }
+    state.bulkText = (state.bulkText.trim() ? state.bulkText.replace(/\s+$/,"")+"\n" : "")+lines.join("\n");
+    state.bulk = null; render();
+    toast(n+" word"+(n>1?"s":"")+" loaded. Check them, then press Add all.");
+  }catch(x){ toast("Could not read that file."); }
+});
+
 document.addEventListener("toggle", e=>{ if(e.target.id==="bulkdetails") state.bulkOpen = e.target.open; }, true);
 
-initStore();
+initStore().then(()=>{ if(state.queue.some(x=>x.status==="wait")) pumpQueue(); });
 render();
 if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) { const had = !!navigator.serviceWorker.controller; let done = false;
   navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(!had || done) return; done = true; location.reload(); });
